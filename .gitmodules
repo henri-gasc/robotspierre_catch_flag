@@ -1,0 +1,6 @@
+[submodule "ev3dev-c"]
+	path = ev3dev-c
+	url = https://github.com/in4lio/ev3dev-c.git
+[submodule "OS_Robot_Project_Fall2020"]
+	path = examples/OS_Robot_Project_Fall2020
+	url = https://gitlab.eurecom.fr/ludovic.apvrille/OS_Robot_Project_Fall2020.git
