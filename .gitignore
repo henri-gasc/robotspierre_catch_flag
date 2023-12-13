@@ -1,1 +1,7 @@
 lastyear
+project_os
+
+# C compiled files
+*.o
+*.a
+*.so
