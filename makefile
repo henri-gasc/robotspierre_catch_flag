@@ -3,17 +3,21 @@ FLAGS = -Wall -Wextra -Wpedantic
 OUT = project_os
 SOURCES = test.c
 LIB = ev3dev-c/lib/libev3dev-c.a
+IP = 164.185
 
 .PHONY: default all build clean send
 
 default: all
 
-all: build send
+all: build-docker send
+
+build-docker:
+	docker run --rm -it -h ev3 -v ./:/src -w /src ev3cc /usr/bin/make build
 
 build: $(OUT)
 
-send: build
-	scp $(OUT) robot@ev3dev.local
+send:
+	scp $(OUT) robot@192.168.$(IP):/home/robot
 
 $(OUT): $(LIB) $(SOURCES)
 	$(CC) $(FLAGS) -o $(OUT) $(SOURCES) -Lev3dev-c/lib -lev3dev-c
