@@ -57,6 +57,7 @@ int main(void) {
     int motor_port = PORT_A;
     bool pressed = false;
     bool quit = false;
+    int motor_state_cycle = 0;
     int motor_state = 0;
 
     if (ev3_search_sensor(LEGO_EV3_TOUCH, &sn_touch, 0)) {
@@ -81,7 +82,12 @@ int main(void) {
 
     while (!quit) {
         if (_check_pressed(sn_touch) & !pressed) {
-            motor_state = (motor_state + 1) % 3;
+            motor_state_cycle++;
+            motor_state_cycle = motor_state_cycle % 4;
+            motor_state = motor_state_cycle%2;
+            if (motor_state == 1) {
+                motor_state = motor_state_cycle - 2;
+            }
             pressed = true;
             // printf("Changed motor_state (now %d)\n", motor_state);
         } else if (pressed & !_check_pressed(sn_touch)) {
@@ -89,10 +95,10 @@ int main(void) {
             // printf("You released the button\n");
         }
 
-        set_tacho_stop_action_inx( sn, TACHO_COAST );
-        set_tacho_speed_sp( sn, (motor_state - 1) * max_speed / 2 );
-        set_tacho_time_sp( sn, 100 );
-        set_tacho_command_inx( sn, TACHO_RUN_TIMED );
+        set_tacho_stop_action_inx(sn, TACHO_COAST);
+        set_tacho_speed_sp(sn, motor_state * max_speed / 3);
+        set_tacho_time_sp(sn, 100);
+        set_tacho_command_inx(sn, TACHO_RUN_TIMED);
     }
 
     ev3_uninit();

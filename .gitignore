@@ -1,6 +1,8 @@
 lastyear
 project_os
 
+test.c
+
 # C compiled files
 *.o
 *.a
