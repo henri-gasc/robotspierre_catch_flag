@@ -3,7 +3,7 @@ FLAGS = -Wall -Wextra -Wpedantic
 OUT = project_os
 SOURCES = test.c
 LIB = ev3dev-c/lib/libev3dev-c.a
-IP = 164.185
+IP = 14.185
 
 .PHONY: default all build clean send
 
