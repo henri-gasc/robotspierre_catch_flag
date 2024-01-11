@@ -115,6 +115,7 @@ int main(void) {
     int port_wheel_left = PORT_A;
     int port_wheel_right = PORT_B;
     int port_clamp = PORT_C;
+    int count = 0;
     bool quit = false;
 
     if (ev3_search_sensor(LEGO_EV3_COLOR, &sn_color, 0)) {
@@ -146,9 +147,13 @@ int main(void) {
         }
         if (!get_sensor_value(0, sn_color, &val_color) || (val_color < 0) || (val_color >= COLOR_COUNT)) {
             val_color = 0;
+            count = 0;
         }
-        if (val_color == 5) { // Red
-            catch_flag(sn_wheel_left, sn_wheel_right, sn_clamp, speed_move);
+        if (val_color != 0) {
+            count++;
+        }
+        if (count >= 2) { // Change color
+            catch_flag(sn_wheel_left, sn_wheel_right, sn_clamp, speed_move_default);
             quit = true;
         }
     }
