@@ -54,12 +54,12 @@ float update_sonar(void) {
  * 
  * @return float gyro_now
  */
-int update_gyro() {
-    int val;
-    get_sensor_value(0, sn_gyro, &val);
-    // gyro_now = (int) gyro_now % 360;
-    return val;
-}
+// int update_gyro() {
+//     int val;
+//     get_sensor_value(0, sn_gyro, &val);
+//     // gyro_now = (int) gyro_now % 360;
+//     return val;
+// }
 
 /**
  * @brief Return the minimum between a and b
@@ -207,10 +207,8 @@ void move_straight(int speed_default, int time, float default_gyro) {
     float speed_right;
     get_sensor_value0(sn_gyro, &val_gyro);
     int diff = (int) (default_gyro - val_gyro) % 360;
-    float mul = 1 + (float) abs(diff) / 20;
-    printf("\r%3d", diff);
-    fflush(stdout);
     if (diff != 0) {
+        float mul = 1 + (float) abs(diff) / 5;
         if (diff > 0) {
             speed_left  = mul * speed_default;
             speed_right = 1.0 * speed_default;
@@ -223,8 +221,6 @@ void move_straight(int speed_default, int time, float default_gyro) {
         speed_left  = speed_default;
     }
     move_forward(speed_left, speed_right, time);
-    // motor_state_time(sn_wheel_left, speed_left, time);
-    // motor_state_time(sn_wheel_right, speed_right, time);
 }
 
 /**
@@ -352,19 +348,14 @@ int main(void) {
         return max_speed;
     }
 
-    // int gyro_now = update_gyro();
-    // const int gyro_val_start = gyro_now;
-    // const int first_angle = gyro_val_start + 45;
-    // const int second_angle = gyro_val_start;
-    // const int third_angle = gyro_val_start - 80;
-    // const int fourth_angle = gyro_val_start - 180;
     float gyro_now;
     get_sensor_value0(sn_gyro, &gyro_now);
     const float gyro_val_start = gyro_now;
     const float first_angle = gyro_val_start + 45;
     const float second_angle = gyro_val_start;
-    const float third_angle = gyro_val_start - 80;
-    const float fourth_angle = gyro_val_start - 180;
+    const float third_angle = gyro_val_start - 50;
+    const float fourth_angle = gyro_val_start - 80;
+    const float fifth_angle = gyro_val_start - 180;
 
     int speed_move_default = max_speed / 4;
     int speed_right = speed_move_default;
@@ -426,7 +417,7 @@ int main(void) {
                     action = 3;
                     printf("Phase 3\n");
                 } else {
-                    move_straight(speed_move_default, speed_move_default, gyro_val_start);
+                    move_straight(speed_move_default, speed_move_default, first_angle);
                 }
             } else if (action == 3) {
                 if (sonar < 250) {
@@ -446,7 +437,7 @@ int main(void) {
                 }
             } else if (action == 5) {
                 if (sonar < 200) {
-                    turn_to(speed_move_default, fourth_angle);
+                    turn_to(speed_move_default, fifth_angle);
                     // while (gyro_now >= (gyro_reference - 80)) {
                     //     // printf("\r%f, %f", default_gyro, val_gyro);
                     //     // fflush(stdout);
@@ -467,10 +458,10 @@ int main(void) {
                         can_catch = true;
                         open_clamp(speed_move_default, 1000);
                     }
-                    move_straight(speed_left, speed_right, third_angle);
+                    move_straight(speed_left, speed_right, fourth_angle);
                 }
             } else if (action == 6) {
-                move_straight(speed_move_default * 2, DEFAULT_TIME, fourth_angle);
+                move_straight(speed_move_default * 2, DEFAULT_TIME, fifth_angle);
                 if (sonar <= DISTANCE_STOP) {
                     move_forward(0, 0, DEFAULT_TIME);
                     Sleep(1000); // Wait 5 five seconds 

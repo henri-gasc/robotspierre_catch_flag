@@ -1,7 +1,7 @@
 CC = arm-linux-gnueabi-gcc
 FLAGS = -Wall -Wextra -Wpedantic
 OUT = project_os
-SOURCES = main.c
+SOURCES = back_not_working.c
 LIB = ev3dev-c/lib/libev3dev-c.a
 IP = 14.185
 
