@@ -16,14 +16,19 @@
 
 #define DEFAULT_TIME 50
 
-const char *port_name[] = {"A", "B", "C", "D"};
-const char *color[] = {"?",      "BLACK", "BLUE",  "GREEN",
-                       "YELLOW", "RED",   "WHITE", "BROWN"};
+const int port_wheel_left = PORT_A;
+const int port_wheel_right = PORT_B;
+const int port_clamp = PORT_C;
 
 // int max_speed = 1000;
 float val_sonar = -1;
 float previous_sonar = -1;
 uint8_t sn_sonar;
+uint8_t sn_wheel_left;
+uint8_t sn_wheel_right;
+uint8_t sn_clamp;
+uint8_t sn_color;
+uint8_t sn_gyro;
 
 float update_sonar(void) {
     get_sensor_value0(sn_sonar, &val_sonar);
@@ -37,8 +42,6 @@ float update_sonar(void) {
     previous_sonar = val_sonar;
     return new_val;
 }
-
-#define COLOR_COUNT ((int)(sizeof(color) / sizeof(color[0])))
 
 int MIN(int a, int b) {
     if (a <= b) {
@@ -93,7 +96,7 @@ void motor_state(uint8_t sn, int speed) {
     motor_state_time(sn, speed, DEFAULT_TIME);
 }
 
-void move_straight(uint8_t left, uint8_t right, int speed_default, uint8_t sn_gyro, int time, float default_gyro) {
+void move_straight(int speed_default, int time, float default_gyro) {
     float val_gyro;
     float speed_left;
     float speed_right;
@@ -114,22 +117,23 @@ void move_straight(uint8_t left, uint8_t right, int speed_default, uint8_t sn_gy
         speed_right = speed_default;
         speed_left  = speed_default;
     }
-    motor_state_time(left, speed_left, time);
-    motor_state_time(right, speed_right, time);
+    motor_state_time(sn_wheel_left, speed_left, time);
+    motor_state_time(sn_wheel_left, speed_right, time);
 }
 
-void move_forward(uint8_t left, uint8_t right, int speed_left, int speed_right, int time) {
-    motor_state_time(left, speed_left, time);
-    motor_state_time(right, speed_right, time);
+void move_forward(int speed_left, int speed_right, int time) {
+    motor_state_time(sn_wheel_left, speed_left, time);
+    motor_state_time(sn_wheel_right, speed_right, time);
 }
 
-void turn_left(uint8_t left, uint8_t right, int speed, int time) {
-    motor_state_time(left, - 0, time);
-    motor_state_time(right, speed, time);
+void turn_left(int speed, int time) {
+    motor_state_time(sn_wheel_left, 0, time);
+    motor_state_time(sn_wheel_right, speed, time);
 }
 
-void turn_right(uint8_t left, uint8_t right, int speed, int time) {
-    turn_left(right, left, speed, time);
+void turn_right(int speed, int time) {
+    motor_state_time(sn_wheel_left, speed, time);
+    motor_state_time(sn_wheel_right, 0, time);
 }
 
 /**
@@ -138,59 +142,34 @@ void turn_right(uint8_t left, uint8_t right, int speed, int time) {
  * @param sn_clamp the uint8_t of the clamp
  * @param speed the speed > 0 to open the clamp
  */
-void open_clamp(uint8_t sn_clamp, float speed, int time) {
+void open_clamp(float speed, int time) {
     motor_state_time(sn_clamp, - speed, time);
 }
 
-void close_clamp(uint8_t sn_clamp, float speed, int time) {
-    open_clamp(sn_clamp, - speed, time);
+void close_clamp(float speed, int time) {
+    open_clamp(- speed, time);
 }
 
-void catch_flag(uint8_t sn_wheel_left, uint8_t sn_wheel_right, uint8_t sn_clamp, int speed) {
-    move_forward(sn_wheel_left, sn_wheel_right, speed, speed, 500);
-    open_clamp(sn_clamp, speed, 1000);
+void catch_flag(int speed) {
+    move_forward(speed, speed, 500);
+    open_clamp(speed, 1000);
     // motor_state_time(sn_clamp, -speed, 1000);
     Sleep(1000);
-    move_forward(sn_wheel_left, sn_wheel_right, 0, 0, DEFAULT_TIME);
-    close_clamp(sn_clamp, speed, 1000);
+    move_forward(0, 0, DEFAULT_TIME);
+    close_clamp(speed, 1000);
     // motor_state_time(sn_clamp, speed, 1000);
     Sleep(1000);
     motor_state(sn_clamp, 0);
 }
 
-int main(void) {
-    uint8_t sn_wheel_left;
-    uint8_t sn_wheel_right;
-    uint8_t sn_clamp;
-    uint8_t sn_color;
-    uint8_t sn_gyro;
-    float default_gyro;
-    float val_gyro;
-    int val_color;
-    int count = 0;
-
-    printf("Test move and catch\n");
-
+int init_robot() {
     if (ev3_init() == -1)
         return 1;
     printf("Waiting tacho is plugged...\n");
-
     while ((ev3_tacho_init() < 1) & (ev3_sensor_init() < 1)) {
         Sleep(1000);
     }
 
-    int port_wheel_left = PORT_A;
-    int port_wheel_right = PORT_B;
-    int port_clamp = PORT_C;
-    bool quit = false;
-
-    // if (ev3_search_sensor(LEGO_EV3_COLOR, &sn_color, 0)) {
-    //     printf("Found the color sensor\n");
-    //     set_sensor_mode_inx(sn_color, LEGO_EV3_COLOR_RGB_RAW);
-    // } else {
-    //     printf("Could not find color sensor. Cannot continue\n");
-    //     return 2;
-    // }
     if (ev3_search_sensor(LEGO_EV3_US, &sn_sonar,0)) {
         printf("Found the sonar\n");
     } else {
@@ -212,6 +191,21 @@ int main(void) {
     if (!is_motor_here(port_clamp, &sn_clamp, "Found the clamp", "Could not find the clamp")) {
         return 5;
     }
+    return 0;
+}
+
+int main(void) {
+    float default_gyro;
+    float val_gyro;
+    int val_color;
+    int count = 0;
+    bool quit = false;
+    int status;
+
+    if ((status = init_robot())) {
+        return status;
+    }
+
     int max_speed = get_min_maxspeed(sn_wheel_left, sn_wheel_right, sn_clamp);
     if (max_speed < 0) {
         return max_speed;
@@ -240,7 +234,7 @@ int main(void) {
             // if (turn) {
             //     turn_right(sn_wheel_left, sn_wheel_right, 2 * speed_move_default, DEFAULT_TIME);
             // } else {
-                move_forward(sn_wheel_left, sn_wheel_right, speed_left, speed_right, DEFAULT_TIME);
+                move_forward(speed_left, speed_right, DEFAULT_TIME);
             // }
         }
         sonar = update_sonar();
@@ -255,7 +249,7 @@ int main(void) {
             // (val_gyro >= (default_gyro_start - 45)
             printf("%f, %f\n", val_gyro, default_gyro_start);
             while (val_gyro <= (default_gyro_start + 45)) {
-                turn_right(sn_wheel_left, sn_wheel_right, 2 * speed_move_default, DEFAULT_TIME);
+                turn_right(2 * speed_move_default, DEFAULT_TIME);
                 get_sensor_value0(sn_gyro, &val_gyro);
             }
             get_sensor_value0(sn_gyro, &default_gyro);
@@ -271,12 +265,12 @@ int main(void) {
                 if (sonar < 200) {
                     action = 3;
                     while (val_gyro >= default_gyro_start) {
-                        turn_left(sn_wheel_left, sn_wheel_right, 2 * speed_move_default, DEFAULT_TIME);
+                        turn_left(2 * speed_move_default, DEFAULT_TIME);
                         get_sensor_value0(sn_gyro, &val_gyro);
                     }
                     printf("Phase 3\n");
                 } else {
-                    move_forward(sn_wheel_left, sn_wheel_right, speed_move_default, speed_move_default, DEFAULT_TIME);
+                    move_forward(speed_move_default, speed_move_default, DEFAULT_TIME);
                 }
             } else if (action == 3) {
                 if (sonar < 250) {
@@ -284,7 +278,7 @@ int main(void) {
                     while (val_gyro >= (default_gyro_start - 50)) {
                         // printf("\r%f, %f", default_gyro, val_gyro);
                         // fflush(stdout);
-                        turn_left(sn_wheel_left, sn_wheel_right, 2 * speed_move_default, DEFAULT_TIME);
+                        turn_left(2 * speed_move_default, DEFAULT_TIME);
                         get_sensor_value0(sn_gyro, &val_gyro);
                     }
                     action = 5;
@@ -292,7 +286,7 @@ int main(void) {
                     get_sensor_value0(sn_gyro, &default_gyro);
                     Sleep(500);
                 } else {
-                    move_straight(sn_wheel_left, sn_wheel_right, speed_move_default, sn_gyro, DEFAULT_TIME, default_gyro_start);
+                    move_straight(speed_move_default, DEFAULT_TIME, default_gyro_start);
                 }
             // Phase 4
             } else if (action == 4) {
@@ -300,7 +294,7 @@ int main(void) {
                     while (val_gyro >= (default_gyro_start - 80)) {
                         // printf("\r%f, %f", default_gyro, val_gyro);
                         // fflush(stdout);
-                        turn_left(sn_wheel_left, sn_wheel_right, 2 * speed_move_default, DEFAULT_TIME);
+                        turn_left(2 * speed_move_default, DEFAULT_TIME);
                         get_sensor_value0(sn_gyro, &val_gyro);
                     }
                     action = 5;
@@ -309,33 +303,33 @@ int main(void) {
                     Sleep(100); // Residual from previous check interfer with this
                     get_sensor_value0(sn_sonar, &sonar);
                 } else {
-                    move_forward(sn_wheel_left, sn_wheel_right, speed_left, speed_right, DEFAULT_TIME);
+                    move_forward(speed_left, speed_right, DEFAULT_TIME);
                 }
             } else if (action == 5) {
                 if (sonar < 200) {
                     while (val_gyro >= (default_gyro - 80)) {
                         // printf("\r%f, %f", default_gyro, val_gyro);
                         // fflush(stdout);
-                        turn_left(sn_wheel_left, sn_wheel_right, 2 * speed_move_default, DEFAULT_TIME);
+                        turn_left(2 * speed_move_default, DEFAULT_TIME);
                         get_sensor_value0(sn_gyro, &val_gyro);
                     }
                     action = 6;
                     printf("Phase 6\n");
                 } else if (sonar < 520) {
                     if (!catch && can_catch) {
-                        catch_flag(sn_wheel_left, sn_wheel_right, sn_clamp, speed_move_default);
+                        catch_flag(speed_move_default);
                         catch = true;
                         get_sensor_value0(sn_gyro, &default_gyro);
                     }
                 } else {
                     if (sonar > 600) {
                         can_catch = true;
-                        open_clamp(sn_clamp, speed_move_default, 1000);
+                        open_clamp(speed_move_default, 1000);
                     }
-                    move_forward(sn_wheel_left, sn_wheel_right, speed_left, speed_right, DEFAULT_TIME);
+                    move_forward(speed_left, speed_right, DEFAULT_TIME);
                 }
             } else {
-                move_straight(sn_wheel_left, sn_wheel_right, speed_move_default, sn_gyro, DEFAULT_TIME, default_gyro_start - 180);
+                move_straight(speed_move_default, DEFAULT_TIME, default_gyro_start - 180);
             }
         }
     }
