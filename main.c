@@ -15,6 +15,7 @@
 #define PORT_D 68
 
 #define DEFAULT_TIME 50
+#define DISTANCE_STOP 50
 
 const int port_wheel_left = PORT_A;
 const int port_wheel_right = PORT_B;
@@ -35,9 +36,9 @@ float update_sonar(void) {
     if (previous_sonar == -1) {
         previous_sonar = val_sonar;
     }
-    if (previous_sonar > val_sonar + 100) {
-        return previous_sonar;
-    }
+    // if (previous_sonar > val_sonar + 100) {
+    //     return previous_sonar;
+    // }
     float new_val = (val_sonar + previous_sonar) / 2;
     previous_sonar = val_sonar;
     return new_val;
@@ -102,9 +103,7 @@ void move_straight(int speed_default, int time, float default_gyro) {
     float speed_right;
     get_sensor_value0(sn_gyro, &val_gyro);
     int diff = (int) (default_gyro - val_gyro) % 360;
-    float mul = 1 + (float) abs(diff) / 20;
-    // printf("\r%3d", diff);
-    // fflush(stdout);
+    float mul = 1 + (float) abs(diff) / 10;
     if (diff != 0) {
         if (diff > 0) {
             speed_left  = mul * speed_default;
@@ -118,7 +117,7 @@ void move_straight(int speed_default, int time, float default_gyro) {
         speed_left  = speed_default;
     }
     motor_state_time(sn_wheel_left, speed_left, time);
-    motor_state_time(sn_wheel_left, speed_right, time);
+    motor_state_time(sn_wheel_right, speed_right, time);
 }
 
 void move_forward(int speed_left, int speed_right, int time) {
@@ -153,13 +152,10 @@ void close_clamp(float speed, int time) {
 void catch_flag(int speed) {
     move_forward(speed, speed, 500);
     open_clamp(speed, 1000);
-    // motor_state_time(sn_clamp, -speed, 1000);
     Sleep(1000);
     move_forward(0, 0, DEFAULT_TIME);
     close_clamp(speed, 1000);
-    // motor_state_time(sn_clamp, speed, 1000);
     Sleep(1000);
-    motor_state(sn_clamp, 0);
 }
 
 int init_robot() {
@@ -220,13 +216,10 @@ int main(void) {
     int speed_move_default = max_speed / 4;
     int speed_right = speed_move_default;
     int speed_left = speed_move_default;
-    int diff = 0;
-    int count_turned = 1;
-    float mul = 1;
-    int action = 3;
+    int action = 0;
     float sonar = 0;
     bool can_catch = false;
-    bool catch = false;
+    bool allow_quit = true;
     get_sensor_value0(sn_gyro, &val_gyro);
 
     while (!quit) {
@@ -237,40 +230,47 @@ int main(void) {
                 move_forward(speed_left, speed_right, DEFAULT_TIME);
             // }
         }
-        sonar = update_sonar();
+        if ((action == 0) || (action == 6)) {
+            get_sensor_value0(sn_sonar, &val_sonar);
+            sonar = val_sonar;
+        } else {
+            sonar = update_sonar();
+        }
         if (!sonar) {
             continue;
         }
-        // printf("%3.0f\n", sonar);
-        // fflush(stdout);
+        printf("\r%3.0f", sonar);
+        fflush(stdout);
 
         // Phase 1
         if (action == 0) {
-            // (val_gyro >= (default_gyro_start - 45)
-            printf("%f, %f\n", val_gyro, default_gyro_start);
             while (val_gyro <= (default_gyro_start + 45)) {
                 turn_right(2 * speed_move_default, DEFAULT_TIME);
                 get_sensor_value0(sn_gyro, &val_gyro);
             }
-            get_sensor_value0(sn_gyro, &default_gyro);
+            // get_sensor_value0(sn_gyro, &default_gyro);
             action = 1;
+            printf("Phase 1");
         }
         if (sonar > 0) {
-            if ((sonar < 50) && (action == 6)) {
+            if (sonar >= DISTANCE_STOP) {
+                allow_quit = false;
+            }
+            if ((sonar < DISTANCE_STOP) && allow_quit) {
                 quit = true;
             }
 
             // Phase 3
             else if (action == 1) {
-                if (sonar < 200) {
-                    action = 3;
+                if (sonar < 230) {
                     while (val_gyro >= default_gyro_start) {
                         turn_left(2 * speed_move_default, DEFAULT_TIME);
                         get_sensor_value0(sn_gyro, &val_gyro);
                     }
+                    action = 3;
                     printf("Phase 3\n");
                 } else {
-                    move_forward(speed_move_default, speed_move_default, DEFAULT_TIME);
+                    move_straight(speed_move_default, speed_move_default, default_gyro_start);
                 }
             } else if (action == 3) {
                 if (sonar < 250) {
@@ -288,23 +288,6 @@ int main(void) {
                 } else {
                     move_straight(speed_move_default, DEFAULT_TIME, default_gyro_start);
                 }
-            // Phase 4
-            } else if (action == 4) {
-                if (sonar < 200) {
-                    while (val_gyro >= (default_gyro_start - 80)) {
-                        // printf("\r%f, %f", default_gyro, val_gyro);
-                        // fflush(stdout);
-                        turn_left(2 * speed_move_default, DEFAULT_TIME);
-                        get_sensor_value0(sn_gyro, &val_gyro);
-                    }
-                    action = 5;
-                    printf("Phase 5\n");
-                    get_sensor_value0(sn_gyro, &default_gyro);
-                    Sleep(100); // Residual from previous check interfer with this
-                    get_sensor_value0(sn_sonar, &sonar);
-                } else {
-                    move_forward(speed_left, speed_right, DEFAULT_TIME);
-                }
             } else if (action == 5) {
                 if (sonar < 200) {
                     while (val_gyro >= (default_gyro - 80)) {
@@ -315,12 +298,14 @@ int main(void) {
                     }
                     action = 6;
                     printf("Phase 6\n");
-                } else if (sonar < 520) {
-                    if (!catch && can_catch) {
+                } else if ((sonar < 550) && (sonar > 450)) {
+                    if (can_catch) {
                         catch_flag(speed_move_default);
-                        catch = true;
                         get_sensor_value0(sn_gyro, &default_gyro);
                     }
+                } else if (sonar <= 450) {
+                    close_clamp(speed_move_default, 1000);
+                    set_tacho_command_inx(sn_clamp, TACHO_RUN_FOREVER);
                 } else {
                     if (sonar > 600) {
                         can_catch = true;
@@ -328,14 +313,20 @@ int main(void) {
                     }
                     move_forward(speed_left, speed_right, DEFAULT_TIME);
                 }
-            } else {
-                move_straight(speed_move_default, DEFAULT_TIME, default_gyro_start - 180);
+            } else if (action == 6) {
+                move_straight(speed_move_default * 2, DEFAULT_TIME, default_gyro_start - 180);
+                if (sonar < DISTANCE_STOP) {
+                    move_forward(0, 0, DEFAULT_TIME);
+                    Sleep(5000); // Wait 5 five seconds 
+                    allow_quit = true;
+                }
             }
         }
     }
 
     stop_motor(sn_wheel_left);
     stop_motor(sn_wheel_right);
+    stop_motor(sn_clamp);
     ev3_uninit();
     return 0;
 }
