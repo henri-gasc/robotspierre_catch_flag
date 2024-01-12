@@ -353,7 +353,7 @@ int main(void) {
     const float gyro_val_start = gyro_now;
     const float first_angle = gyro_val_start + 45;
     const float second_angle = gyro_val_start;
-    const float third_angle = gyro_val_start - 50;
+    const float third_angle = gyro_val_start - 60;
     const float fourth_angle = gyro_val_start - 80;
     const float fifth_angle = gyro_val_start - 180;
 
@@ -421,7 +421,7 @@ int main(void) {
                 }
             } else if (action == 3) {
                 if (sonar < 250) {
-                    turn_to(speed_move_default, third_angle);
+                    turn_to(speed_move_default, fourth_angle);
                     // update_gyro();
                     // while (gyro_now >= (gyro_val_start - 50)) {
                     //     // printf("\r%f, %f", default_gyro, val_gyro);
