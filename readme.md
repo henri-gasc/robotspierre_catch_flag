@@ -6,5 +6,5 @@ Massin CHOUKR
 
 ## Robospierre
 
-![Robospierre in action](./img/action.mp4)
-
+![Robospierre catching a flag](./imgs/action.mp4)
+![Robospierre in the arena](./imgs/better.mp4)
