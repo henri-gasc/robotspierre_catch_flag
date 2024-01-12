@@ -22,8 +22,10 @@ const int port_wheel_right = PORT_B;
 const int port_clamp = PORT_C;
 
 // int max_speed = 1000;
-float val_sonar = -1;
 float previous_sonar = -1;
+float val_sonar = -1;
+float gyro_reference = 0;
+float gyro_now = 0;
 uint8_t sn_sonar;
 uint8_t sn_wheel_left;
 uint8_t sn_wheel_right;
@@ -31,6 +33,11 @@ uint8_t sn_clamp;
 uint8_t sn_color;
 uint8_t sn_gyro;
 
+/**
+ * @brief Return the value of the sonar after some filtering
+ * 
+ * @return float the value of the sonar
+ */
 float update_sonar(void) {
     get_sensor_value0(sn_sonar, &val_sonar);
     if (previous_sonar == -1) {
@@ -44,6 +51,24 @@ float update_sonar(void) {
     return new_val;
 }
 
+/**
+ * @brief Update IN PLACE gyro_now and return the value
+ * 
+ * @return float gyro_now
+ */
+float update_gyro(void) {
+    get_sensor_value0(sn_gyro, &gyro_now);
+    // gyro_now = (int) gyro_now % 360;
+    return gyro_now;
+}
+
+/**
+ * @brief Return the minimum between a and b
+ * 
+ * @param a the first value
+ * @param b the second value
+ * @return int the minimum
+ */
 int MIN(int a, int b) {
     if (a <= b) {
         return a;
@@ -52,17 +77,34 @@ int MIN(int a, int b) {
     }
 }
 
-int is_motor_here(int port, uint8_t* sn, char* text_yes, char* text_no) {
-    int status = 1;
+/**
+ * @brief Test for the presence of a motor on the specified port
+ * 
+ * @param port the port the motor should connected to
+ * @param sn the address of the sn
+ * @param text_yes the text to print when the motor is found
+ * @param text_no the text to print when the motor is not found
+ * @return bool if the motor was found or not
+ */
+bool is_motor_here(int port, uint8_t* sn, char* text_yes, char* text_no) {
+    bool status = true;
     if (!ev3_search_tacho_plugged_in(port, 0, sn, 0)) {
         printf("%s\n", text_no);
-        status = 0;
+        status = false;
     } else {
         printf("%s\n", text_yes);
     }
     return status;
 }
 
+/**
+ * @brief Get the minimum of the maximum speed the motors can run at
+ * 
+ * @param sn_1 the first motor
+ * @param sn_2 the second motor
+ * @param sn_3 the thrid motor
+ * @return int the speed (< 0 if error)
+ */
 int get_min_maxspeed(uint8_t sn_1, uint8_t sn_2, uint8_t sn_3) {
     int max_speed;
     int temp;
@@ -82,6 +124,13 @@ int get_min_maxspeed(uint8_t sn_1, uint8_t sn_2, uint8_t sn_3) {
     return MIN(max_speed, temp);
 }
 
+/**
+ * @brief set the motor to the speed for the set time
+ * 
+ * @param sn the motor
+ * @param speed the speed
+ * @param time the time
+ */
 void motor_state_time(uint8_t sn, int speed, int time) {
     set_tacho_stop_action_inx(sn, TACHO_COAST);
     set_tacho_speed_sp(sn, speed);
@@ -89,20 +138,49 @@ void motor_state_time(uint8_t sn, int speed, int time) {
     set_tacho_command_inx(sn, TACHO_RUN_TIMED);
 }
 
+/**
+ * @brief Tell the motor to stop
+ * 
+ * @param sn the motor
+ */
 void stop_motor(uint8_t sn) {
     set_tacho_command_inx(sn, TACHO_STOP);
 }
 
+/**
+ * @brief Set the motor to run with the default time
+ * 
+ * @param sn the motor
+ * @param speed the time
+ */
 void motor_state(uint8_t sn, int speed) {
     motor_state_time(sn, speed, DEFAULT_TIME);
 }
 
-void move_straight(int speed_default, int time, float default_gyro) {
-    float val_gyro;
+/**
+ * @brief Set the two wheel to run at the specified speeds
+ * 
+ * @param speed_left the speed of the left wheel
+ * @param speed_right the speed of the right wheel
+ * @param time the time the motor should turn for
+ */
+void move_forward(int speed_left, int speed_right, int time) {
+    motor_state_time(sn_wheel_left, speed_left, time);
+    motor_state_time(sn_wheel_right, speed_right, time);
+}
+
+/**
+ * @brief Move the robot in a straigh line accoring to gyro_ref
+ * 
+ * @param speed_default the baseline speed
+ * @param time the time the motor should turn
+ * @param gyro_ref the value of reference for the gyroscope
+ */
+void move_straight(int speed_default, int time, float gyro_ref) {
     float speed_left;
     float speed_right;
-    get_sensor_value0(sn_gyro, &val_gyro);
-    int diff = (int) (default_gyro - val_gyro) % 360;
+    update_gyro();
+    int diff = (int) (gyro_ref - gyro_now) % 360;
     float mul = 1 + (float) abs(diff) / 10;
     if (diff != 0) {
         if (diff > 0) {
@@ -116,20 +194,26 @@ void move_straight(int speed_default, int time, float default_gyro) {
         speed_right = speed_default;
         speed_left  = speed_default;
     }
-    motor_state_time(sn_wheel_left, speed_left, time);
-    motor_state_time(sn_wheel_right, speed_right, time);
+    move_forward(speed_left, speed_right, time);
 }
 
-void move_forward(int speed_left, int speed_right, int time) {
-    motor_state_time(sn_wheel_left, speed_left, time);
-    motor_state_time(sn_wheel_right, speed_right, time);
-}
-
+/**
+ * @brief Turn to the left
+ * 
+ * @param speed the speed
+ * @param time the time
+ */
 void turn_left(int speed, int time) {
     motor_state_time(sn_wheel_left, 0, time);
     motor_state_time(sn_wheel_right, speed, time);
 }
 
+/**
+ * @brief Turn to the right
+ * 
+ * @param speed the speed
+ * @param time the time
+ */
 void turn_right(int speed, int time) {
     motor_state_time(sn_wheel_left, speed, time);
     motor_state_time(sn_wheel_right, 0, time);
@@ -138,17 +222,28 @@ void turn_right(int speed, int time) {
 /**
  * @brief Open the clamp
  * 
- * @param sn_clamp the uint8_t of the clamp
  * @param speed the speed > 0 to open the clamp
+ * @param time the time
  */
 void open_clamp(float speed, int time) {
     motor_state_time(sn_clamp, - speed, time);
 }
 
+/**
+ * @brief Close the clamp
+ * 
+ * @param speed the speed
+ * @param time the time
+ */
 void close_clamp(float speed, int time) {
     open_clamp(- speed, time);
 }
 
+/**
+ * @brief Function that ease catching the flag
+ * 
+ * @param speed the speed
+ */
 void catch_flag(int speed) {
     move_forward(speed, speed, 500);
     open_clamp(speed, 1000);
@@ -158,7 +253,12 @@ void catch_flag(int speed) {
     Sleep(1000);
 }
 
-int init_robot() {
+/**
+ * @brief Initialize the motors and sensors of the robot
+ * 
+ * @return int the success status
+ */
+int init_robot(void) {
     if (ev3_init() == -1)
         return 1;
     printf("Waiting tacho is plugged...\n");
@@ -191,10 +291,6 @@ int init_robot() {
 }
 
 int main(void) {
-    float default_gyro;
-    float val_gyro;
-    int val_color;
-    int count = 0;
     bool quit = false;
     int status;
 
@@ -207,12 +303,8 @@ int main(void) {
         return max_speed;
     }
 
-    get_sensor_value0(sn_gyro, &default_gyro);
-    const float default_gyro_start = default_gyro;
+    const float gyro_val_start = update_gyro();
 
-    bool move = true;
-    bool turn = false;
-    bool turned = false;
     int speed_move_default = max_speed / 4;
     int speed_right = speed_move_default;
     int speed_left = speed_move_default;
@@ -220,7 +312,6 @@ int main(void) {
     float sonar = 0;
     bool can_catch = false;
     bool allow_quit = true;
-    get_sensor_value0(sn_gyro, &val_gyro);
 
     while (!quit) {
         if ((action == 1) || (action == 2) | (action == 4) | (action == 5)) {
@@ -244,9 +335,9 @@ int main(void) {
 
         // Phase 1
         if (action == 0) {
-            while (val_gyro <= (default_gyro_start + 45)) {
+            while (gyro_now <= (gyro_val_start + 45)) {
                 turn_right(2 * speed_move_default, DEFAULT_TIME);
-                get_sensor_value0(sn_gyro, &val_gyro);
+                update_gyro();
             }
             // get_sensor_value0(sn_gyro, &default_gyro);
             action = 1;
@@ -263,45 +354,45 @@ int main(void) {
             // Phase 3
             else if (action == 1) {
                 if (sonar < 230) {
-                    while (val_gyro >= default_gyro_start) {
+                    while (gyro_now >= gyro_val_start) {
                         turn_left(2 * speed_move_default, DEFAULT_TIME);
-                        get_sensor_value0(sn_gyro, &val_gyro);
+                        update_gyro();
                     }
                     action = 3;
                     printf("Phase 3\n");
                 } else {
-                    move_straight(speed_move_default, speed_move_default, default_gyro_start);
+                    move_straight(speed_move_default, DEFAULT_TIME, gyro_val_start);
                 }
             } else if (action == 3) {
                 if (sonar < 250) {
-                    get_sensor_value0(sn_gyro, &val_gyro);
-                    while (val_gyro >= (default_gyro_start - 50)) {
+                    update_gyro();
+                    while (gyro_now >= (gyro_val_start - 50)) {
                         // printf("\r%f, %f", default_gyro, val_gyro);
                         // fflush(stdout);
                         turn_left(2 * speed_move_default, DEFAULT_TIME);
-                        get_sensor_value0(sn_gyro, &val_gyro);
+                        update_gyro();
                     }
                     action = 5;
                     printf("Phase 5\n");
-                    get_sensor_value0(sn_gyro, &default_gyro);
+                    gyro_reference = update_gyro();
                     Sleep(500);
                 } else {
-                    move_straight(speed_move_default, DEFAULT_TIME, default_gyro_start);
+                    move_straight(speed_move_default, DEFAULT_TIME, gyro_val_start);
                 }
             } else if (action == 5) {
                 if (sonar < 200) {
-                    while (val_gyro >= (default_gyro - 80)) {
+                    while (gyro_now >= (gyro_reference - 80)) {
                         // printf("\r%f, %f", default_gyro, val_gyro);
                         // fflush(stdout);
                         turn_left(2 * speed_move_default, DEFAULT_TIME);
-                        get_sensor_value0(sn_gyro, &val_gyro);
+                        update_gyro();
                     }
                     action = 6;
                     printf("Phase 6\n");
                 } else if ((sonar < 550) && (sonar > 450)) {
                     if (can_catch) {
                         catch_flag(speed_move_default);
-                        get_sensor_value0(sn_gyro, &default_gyro);
+                        gyro_reference = update_gyro();
                     }
                 } else if (sonar <= 450) {
                     close_clamp(speed_move_default, 1000);
@@ -314,7 +405,7 @@ int main(void) {
                     move_forward(speed_left, speed_right, DEFAULT_TIME);
                 }
             } else if (action == 6) {
-                move_straight(speed_move_default * 2, DEFAULT_TIME, default_gyro_start - 180);
+                move_straight(speed_move_default * 2, DEFAULT_TIME, gyro_val_start - 180);
                 if (sonar < DISTANCE_STOP) {
                     move_forward(0, 0, DEFAULT_TIME);
                     Sleep(5000); // Wait 5 five seconds 
