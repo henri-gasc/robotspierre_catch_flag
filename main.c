@@ -18,21 +18,22 @@
 #define DEFAULT_TIME 50
 #define DISTANCE_STOP 50
 
+// For the brick
 const int port_wheel_left = PORT_A;
 const int port_wheel_right = PORT_B;
 const int port_clamp = PORT_C;
-
-int action = 0;
-
-float previous_sonar = -1;
-float val_sonar = -1;
-int gyro_now = -1;
 uint8_t sn_sonar;
 uint8_t sn_wheel_left;
 uint8_t sn_wheel_right;
 uint8_t sn_clamp;
 uint8_t sn_color;
 uint8_t sn_gyro;
+
+// Variables that change over the course of the program
+int action = 0;
+float previous_sonar = -1;
+float val_sonar = -1;
+int gyro_now = -1;
 
 /**
  * @brief Return the value of the sonar after some filtering
@@ -357,9 +358,7 @@ int init_robot(void) {
 }
 
 int main(void) {
-    bool quit = false;
     int status;
-
     if ((status = init_robot())) {
         return status;
     }
@@ -369,6 +368,14 @@ int main(void) {
         return max_speed;
     }
 
+    // Action 0: Turn to 45° the right
+    // Action 1: starting position -> wall, turn to start orientation
+    // Action 2: wall right -> wall other side, turn 90° to the left
+    // Action 3: move straigh while closing the clamp, turn 90° to the left
+    // Action 4: Speed to our camp
+    // Action 5: may be needed if flag is to be in starting square
+
+    /* Here are the angle the robot should follow for all phases */
     const float gyro_val_start = update_gyro();
     const float first_angle = gyro_val_start + 45;
     const float second_angle = gyro_val_start;
@@ -379,18 +386,12 @@ int main(void) {
     const int speed_move_default = max_speed / 4;
     const int speed_right = speed_move_default;
     const int speed_left = speed_move_default;
+
     float sonar = 0;
+    bool quit = false;
     bool can_catch = false;
     bool allow_quit = false;
-
     time_t start = time(NULL);
-
-    // Action 0: Turn to 45° the right
-    // Action 1: starting position -> wall, turn to start orientation
-    // Action 2: wall right -> wall other side, turn 90° to the left
-    // Action 3: move straigh while closing the clamp, turn 90° to the left
-    // Action 4: Speed to our camp
-    // Action 5: may be needed if flag is to be in starting square
 
     while (!quit) {
         if ((action == 1) || (action == 3)) {
