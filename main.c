@@ -413,14 +413,14 @@ int main(void) {
                     action = 7;
                     printf("Action 7\n");
                 }
-            } else if (action == 7) {
-                move_straight(speed_move_default * 2, DEFAULT_TIME, fifth_angle);
-                if (sonar <= 500) {
+            // } else if (action == 7) {
+            //     move_straight(speed_move_default * 2, DEFAULT_TIME, fifth_angle);
+            //     if (sonar <= 500) {
 
-                    move_forward(0, 0, DEFAULT_TIME);
-                    Sleep(1000); // Wait 5 five seconds 
-                    allow_quit = true;
-                }
+            //         move_forward(0, 0, DEFAULT_TIME);
+            //         Sleep(1000); // Wait 5 five seconds 
+            //         allow_quit = true;
+            //     }
             }
         }
     }
