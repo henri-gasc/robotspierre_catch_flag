@@ -21,6 +21,8 @@ const int port_wheel_left = PORT_A;
 const int port_wheel_right = PORT_B;
 const int port_clamp = PORT_C;
 
+int action = 0;
+
 float previous_sonar = -1;
 float val_sonar = -1;
 int gyro_now = -1;
@@ -58,6 +60,25 @@ int update_gyro() {
     get_sensor_value(0, sn_gyro, &gyro_now);
     // gyro_now = (int) gyro_now % 360;
     return gyro_now;
+}
+
+/**
+ * @brief Increment the action counter by 1
+ * 
+ */
+void change_action() {
+    action++;
+    printf("Action %d\n", action);
+}
+
+/**
+ * @brief Force the action counter to be this value
+ * 
+ * @param new_action the new value for the action counter
+ */
+void override_action(int new_action) {
+    printf("Force the change of action from %d to %d\n", action, new_action);
+    action = new_action;
 }
 
 /**
@@ -321,15 +342,13 @@ int main(void) {
     const float gyro_val_start = update_gyro();
     const float first_angle = gyro_val_start + 45;
     const float second_angle = gyro_val_start;
-    const float third_angle = gyro_val_start - 60;
-    const float fourth_angle = gyro_val_start - 90;
-    const float fifth_angle = gyro_val_start - 180;
-    const float sixth_angle = gyro_val_start + 90;
+    const float third_angle = gyro_val_start - 90;
+    const float fourth_angle = gyro_val_start - 180;
+    // const float fifth_angle = gyro_val_start + 90;
 
-    int speed_move_default = max_speed / 4;
-    int speed_right = speed_move_default;
-    int speed_left = speed_move_default;
-    int action = 0;
+    const int speed_move_default = max_speed / 4;
+    const int speed_right = speed_move_default;
+    const int speed_left = speed_move_default;
     float sonar = 0;
     bool can_catch = false;
     bool allow_quit = false;
@@ -342,11 +361,11 @@ int main(void) {
     // Action 5: may be needed if flag is to be in starting square
 
     while (!quit) {
-        if ((action == 1) || (action == 5)) {
+        if ((action == 1) || (action == 3)) {
             move_forward(speed_left, speed_right, DEFAULT_TIME);
         }
 
-        if ((action == 0) || (action == 6)) {
+        if ((action == 0) || (action == 4)) {
             get_sensor_value0(sn_sonar, &val_sonar);
             sonar = val_sonar;
         } else {
@@ -356,11 +375,10 @@ int main(void) {
             continue;
         }
 
-        // Phase 1
+        // Phase 0
         if (action == 0) {
             turn_to(2 * speed_move_default, first_angle);
-            action = 1;
-            printf("Phase 1\n");
+            change_action();
         }
         if (sonar > 0) {
             if (sonar >= DISTANCE_STOP) {
@@ -370,29 +388,28 @@ int main(void) {
                 quit = true;
             }
 
-            // Phase 3
+            // Phase 1
             else if (action == 1) {
                 if (sonar < 280) {
                     turn_to(speed_move_default, second_angle);
-                    action = 3;
-                    printf("Phase 3\n");
+                    change_action();
                 } else {
                     move_straight(speed_move_default, speed_move_default, first_angle);
                 }
-            } else if (action == 3) {
+            // Phase 2
+            } else if (action == 2) {
                 if (sonar < 270) {
-                    turn_to(speed_move_default, fourth_angle);
-                    action = 5;
-                    printf("Phase 5\n");
+                    turn_to(speed_move_default, third_angle);
+                    change_action();
                     Sleep(500);
                 } else {
                     move_straight(speed_move_default, DEFAULT_TIME, second_angle);
                 }
-            } else if (action == 5) {
+            // Phase 3
+            } else if (action == 3) {
                 if (sonar < 200) {
-                    turn_to(speed_move_default, fifth_angle);
-                    action = 6;
-                    printf("Phase 6\n");
+                    turn_to(speed_move_default, fourth_angle);
+                    change_action();
                 } else if ((sonar < 550) && (sonar > 450)) {
                     if (can_catch) {
                         catch_flag(speed_move_default);
@@ -405,10 +422,10 @@ int main(void) {
                         can_catch = true;
                         open_clamp(speed_move_default, 1000);
                     }
-                    move_straight(speed_left, speed_right, fourth_angle);
+                    move_straight(speed_left, speed_right, third_angle);
                 }
-            } else if (action == 6) {
-                move_straight(speed_move_default * 2, DEFAULT_TIME, fifth_angle);
+            } else if (action == 4) {
+                move_straight(speed_move_default * 2, DEFAULT_TIME, fourth_angle);
                 if (sonar <= DISTANCE_STOP) {
                     move_forward(0, 0, DEFAULT_TIME);
                     Sleep(1000); // Wait 5 five seconds 
