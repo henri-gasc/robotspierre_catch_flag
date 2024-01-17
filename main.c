@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 #include <unistd.h>
 
 #include "include/ev3.h"
@@ -289,6 +290,35 @@ void turn_to(int speed, float gyro_ref) {
     }
 }
 
+void bypass_obstacle(int speed, float reference_angle) {
+    Sleep(3000);
+    update_sonar();
+    if (val_sonar >= 200) {
+        printf("There is no opponent\n");
+        return;
+    }
+    turn_to(speed, reference_angle - 90);
+    update_sonar();
+    while (val_sonar >= 250) {
+        move_straight(2 * speed, DEFAULT_TIME, reference_angle - 90);
+        update_sonar();
+    }
+    turn_to(speed, reference_angle);
+    time_t start = time(NULL);
+    time_t now = start;
+    while (start + 1 > now) {
+        move_straight(2 * speed, DEFAULT_TIME, reference_angle);
+        time(&now);
+    }
+    turn_to(speed, reference_angle + 90);
+    update_sonar();
+    while (val_sonar >= 250) {
+        move_straight(2 * speed, DEFAULT_TIME, reference_angle + 90);
+        update_sonar();
+    }
+    turn_to(speed, reference_angle);
+}
+
 /**
  * @brief Initialize the motors and sensors of the robot
  * 
@@ -352,6 +382,8 @@ int main(void) {
     float sonar = 0;
     bool can_catch = false;
     bool allow_quit = false;
+
+    time_t start = time(NULL);
 
     // Action 0: Turn to 45° the right
     // Action 1: starting position -> wall, turn to start orientation
