@@ -21,9 +21,9 @@ const int port_wheel_left = PORT_A;
 const int port_wheel_right = PORT_B;
 const int port_clamp = PORT_C;
 
-// int max_speed = 1000;
 float previous_sonar = -1;
 float val_sonar = -1;
+int gyro_now = -1;
 uint8_t sn_sonar;
 uint8_t sn_wheel_left;
 uint8_t sn_wheel_right;
@@ -54,12 +54,11 @@ float update_sonar(void) {
  * 
  * @return float gyro_now
  */
-// int update_gyro() {
-//     int val;
-//     get_sensor_value(0, sn_gyro, &val);
-//     // gyro_now = (int) gyro_now % 360;
-//     return val;
-// }
+int update_gyro() {
+    get_sensor_value(0, sn_gyro, &gyro_now);
+    // gyro_now = (int) gyro_now % 360;
+    return gyro_now;
+}
 
 /**
  * @brief Return the minimum between a and b
@@ -176,11 +175,11 @@ void move_forward(int speed_left, int speed_right, int time) {
  * @param gyro_ref the value of reference for the gyroscope
  */
 void move_straight(int speed_default, int time, float default_gyro) {
-    float val_gyro;
     float speed_left;
     float speed_right;
-    get_sensor_value0(sn_gyro, &val_gyro);
-    int diff = (int) (default_gyro - val_gyro) % 360;
+
+    update_gyro();
+    int diff = (int) (default_gyro - gyro_now) % 360;
     if (diff != 0) {
         float mul = 1 + (float) abs(diff) / 5;
         if (diff > 0) {
@@ -254,9 +253,7 @@ void catch_flag(int speed) {
 }
 
 void turn_to(int speed, float gyro_ref) {
-    // int gyro_now = update_gyro();
-    float gyro_now;
-    get_sensor_value0(sn_gyro, &gyro_now);
+    int gyro_now = update_gyro();
     bool quit = false;
     float diff;
     while (!quit) {
@@ -266,8 +263,7 @@ void turn_to(int speed, float gyro_ref) {
         } else if (diff < 0) {
             turn_left(speed, DEFAULT_TIME);
         }
-        // gyro_now = update_gyro();
-        get_sensor_value0(sn_gyro, &gyro_now);
+        gyro_now = update_gyro();
         quit = (gyro_ref - 1 <= gyro_now) && (gyro_now <= gyro_ref + 1);
     }
 }
@@ -322,9 +318,7 @@ int main(void) {
         return max_speed;
     }
 
-    float gyro_now;
-    get_sensor_value0(sn_gyro, &gyro_now);
-    const float gyro_val_start = gyro_now;
+    const float gyro_val_start = update_gyro();
     const float first_angle = gyro_val_start + 45;
     const float second_angle = gyro_val_start;
     const float third_angle = gyro_val_start - 60;
@@ -339,6 +333,13 @@ int main(void) {
     float sonar = 0;
     bool can_catch = false;
     bool allow_quit = false;
+
+    // Action 0: Turn to 45° the right
+    // Action 1: starting position -> wall, turn to start orientation
+    // Action 2: wall right -> wall other side, turn 90° to the left
+    // Action 3: move straigh while closing the clamp, turn 90° to the left
+    // Action 4: Speed to our camp
+    // Action 5: may be needed if flag is to be in starting square
 
     while (!quit) {
         if ((action == 1) || (action == 5)) {
@@ -408,11 +409,16 @@ int main(void) {
                 }
             } else if (action == 6) {
                 move_straight(speed_move_default * 2, DEFAULT_TIME, fifth_angle);
-                if (sonar <= 250) {
-                    turn_to(speed_move_default * 2, sixth_angle);
-                    action = 7;
-                    printf("Action 7\n");
+                if (sonar <= DISTANCE_STOP) {
+                    move_forward(0, 0, DEFAULT_TIME);
+                    Sleep(1000); // Wait 5 five seconds 
+                    allow_quit = true;
                 }
+                // if (sonar <= 250) {
+                //     turn_to(speed_move_default * 2, sixth_angle);
+                //     action = 7;
+                //     printf("Action 7\n");
+                // }
             // } else if (action == 7) {
             //     move_straight(speed_move_default * 2, DEFAULT_TIME, fifth_angle);
             //     if (sonar <= 500) {
