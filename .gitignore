@@ -2,6 +2,7 @@ lastyear
 project_os
 
 test.c
+bin
 
 # C compiled files
 *.o

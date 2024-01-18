@@ -4,6 +4,7 @@ OUT = project_os
 SOURCES = main.c
 LIB = ev3dev-c/lib/libev3dev-c.a
 IP = 47.185
+EXAMPLES=$(wildcard examples/*.c)
 
 .PHONY: default all build clean send
 
@@ -24,3 +25,7 @@ $(OUT): $(LIB) $(SOURCES)
 
 $(LIB):
 	make -C ev3dev-c/source/ev3
+
+angle: examples/angle.c
+	docker run --rm -it -h ev3 -v ./:/src -w /src ev3cc $(CC) $(FLAGS) examples/angle.c -o bin/angle -Lev3dev-c/lib -lev3dev-c
+	scp bin/angle robot@192.168.$(IP):/home/robot

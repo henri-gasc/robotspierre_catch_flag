@@ -4,9 +4,9 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#include "include/ev3.h"
-#include "include/ev3_sensor.h"
-#include "include/ev3_tacho.h"
+#include "../include/ev3.h"
+#include "../include/ev3_sensor.h"
+#include "../include/ev3_tacho.h"
 
 #define Sleep(msec) usleep((msec) * 1000)
 #define PORT_A 65
@@ -30,7 +30,7 @@ int MIN(int a, int b) {
     }
 }
 
-int is_motor_here(int port, uint8_t* sn, char* text_yes, char* text_no) {
+int is_motor_here(int port, uint8_t *sn, char *text_yes, char *text_no) {
     int status = 1;
     if (!ev3_search_tacho_plugged_in(port, 0, sn, 0)) {
         printf("%s\n", text_no);
@@ -87,21 +87,20 @@ void motor_state_time(uint8_t sn, int speed, int time) {
     set_tacho_command_inx(sn, TACHO_RUN_TIMED);
 }
 
-void stop_motor(uint8_t sn) {
-    set_tacho_command_inx(sn, TACHO_STOP);
-}
+void stop_motor(uint8_t sn) { set_tacho_command_inx(sn, TACHO_STOP); }
 
 void motor_state(uint8_t sn, int speed) {
     motor_state_time(sn, speed, DEFAULT_TIME);
 }
 
-void move_forward(uint8_t left, uint8_t right, int speed_left, int speed_right, int time) {
+void move_forward(uint8_t left, uint8_t right, int speed_left, int speed_right,
+                  int time) {
     motor_state_time(left, speed_left, time);
     motor_state_time(right, speed_right, time);
 }
 
 void turn_left(uint8_t left, uint8_t right, int speed, int time) {
-    motor_state_time(left, - speed, time);
+    motor_state_time(left, -speed, time);
     motor_state_time(right, speed, time);
 }
 
@@ -109,7 +108,8 @@ void turn_right(uint8_t left, uint8_t right, int speed, int time) {
     turn_left(right, left, speed, time);
 }
 
-void catch_flag(uint8_t sn_wheel_left, uint8_t sn_wheel_right, uint8_t sn_clamp, int speed) {
+void catch_flag(uint8_t sn_wheel_left, uint8_t sn_wheel_right, uint8_t sn_clamp,
+                int speed) {
     move_forward(sn_wheel_left, sn_wheel_right, speed, speed, 500);
     motor_state_time(sn_clamp, -speed, 1000);
     Sleep(1000);
@@ -147,16 +147,19 @@ int main(void) {
     int port_clamp = PORT_C;
     bool quit = false;
 
-    if (ev3_search_sensor(LEGO_EV3_GYRO, &sn_gyro,0)) {
+    if (ev3_search_sensor(LEGO_EV3_GYRO, &sn_gyro, 0)) {
         printf("Found the gyroscope\n");
     } else {
         printf("Could not find the gyroscope\n");
         return 2;
     }
-    if (!is_motor_here(port_wheel_left, &sn_wheel_left, "Found the left wheel", "Could not find the left wheel")) {
+    if (!is_motor_here(port_wheel_left, &sn_wheel_left, "Found the left wheel",
+                       "Could not find the left wheel")) {
         return 3;
     }
-    if (!is_motor_here(port_wheel_right, &sn_wheel_right, "Found the right wheel", "Could not find the right wheel")) {
+    if (!is_motor_here(port_wheel_right, &sn_wheel_right,
+                       "Found the right wheel",
+                       "Could not find the right wheel")) {
         return 4;
     }
     int max_speed = get_min_maxspeed(sn_wheel_left, sn_wheel_right, sn_clamp);
@@ -177,24 +180,26 @@ int main(void) {
     while (!quit) {
         if (move) {
             get_sensor_value0(sn_gyro, &val_gyro);
-            diff = (int) (default_gyro - val_gyro) % 360;
-            mul = 1 + (float) abs(diff) / 3;
+            diff = (int)(default_gyro - val_gyro) % 360;
+            mul = 1 + (float)abs(diff) / 3;
             // printf("\r%3d", diff);
             // fflush(stdout);
             if (diff > 0) {
-                speed_left  = mul * speed_move_default;
+                speed_left = mul * speed_move_default;
                 speed_right = 1.0 * speed_move_default;
             } else if (diff < 0) {
-                speed_left  = 1.0 * speed_move_default;
+                speed_left = 1.0 * speed_move_default;
                 speed_right = mul * speed_move_default;
             } else {
                 speed_right = speed_move_default;
-                speed_left  = speed_move_default;
+                speed_left = speed_move_default;
             }
             if (turn) {
-                turn_right(sn_wheel_left, sn_wheel_right, 2 * speed_move_default, DEFAULT_TIME);
+                turn_right(sn_wheel_left, sn_wheel_right,
+                           2 * speed_move_default, DEFAULT_TIME);
             } else {
-                move_forward(sn_wheel_left, sn_wheel_right, speed_left, speed_right, DEFAULT_TIME);
+                move_forward(sn_wheel_left, sn_wheel_right, speed_left,
+                             speed_right, DEFAULT_TIME);
             }
         }
     }

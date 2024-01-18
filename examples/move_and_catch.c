@@ -3,10 +3,9 @@
 #include <stdio.h>
 #include <unistd.h>
 
-#include "ev3dev-c/source/ev3/brick.h"
-#include "include/ev3.h"
-#include "include/ev3_sensor.h"
-#include "include/ev3_tacho.h"
+#include "../include/ev3.h"
+#include "../include/ev3_sensor.h"
+#include "../include/ev3_tacho.h"
 
 #define Sleep(msec) usleep((msec) * 1000)
 #define PORT_A 65
@@ -28,7 +27,7 @@ int MIN(int a, int b) {
     }
 }
 
-int is_motor_here(int port, uint8_t* sn, char* text_yes, char* text_no) {
+int is_motor_here(int port, uint8_t *sn, char *text_yes, char *text_no) {
     int status = 1;
     if (!ev3_search_tacho_plugged_in(port, 0, sn, 0)) {
         printf("%s\n", text_no);
@@ -65,16 +64,15 @@ void motor_state_time(uint8_t sn, int speed, int time) {
     set_tacho_command_inx(sn, TACHO_RUN_TIMED);
 }
 
-void motor_state(uint8_t sn, int speed) {
-    motor_state_time(sn, speed, 100);
-}
+void motor_state(uint8_t sn, int speed) { motor_state_time(sn, speed, 100); }
 
 void move_forward(uint8_t left, uint8_t right, int speed, int time) {
     motor_state_time(left, speed, time);
     motor_state_time(right, speed, time);
 }
 
-void catch_flag(uint8_t sn_wheel_left, uint8_t sn_wheel_right, uint8_t sn_clamp, int speed) {
+void catch_flag(uint8_t sn_wheel_left, uint8_t sn_wheel_right, uint8_t sn_clamp,
+                int speed) {
     move_forward(sn_wheel_left, sn_wheel_right, speed, 500);
     motor_state_time(sn_clamp, -speed, 1000);
     Sleep(1000);
@@ -108,7 +106,7 @@ int main(void) {
             printf("  type = %s\n", ev3_tacho_type(ev3_tacho[i].type_inx));
             printf("  port = %s\n", ev3_tacho_port_name(i, s));
             printf("  port = %d %d\n", ev3_tacho_desc_port(i),
-            ev3_tacho_desc_extport(i));
+                   ev3_tacho_desc_extport(i));
         }
     }
 
@@ -124,13 +122,17 @@ int main(void) {
         printf("Could not find touch sensor. Cannot continue\n");
         return 2;
     }
-    if (!is_motor_here(port_wheel_left, &sn_wheel_left, "Found the left wheel", "Could not find the left wheel")) {
+    if (!is_motor_here(port_wheel_left, &sn_wheel_left, "Found the left wheel",
+                       "Could not find the left wheel")) {
         return 3;
     }
-    if (!is_motor_here(port_wheel_right, &sn_wheel_right, "Found the right wheel", "Could not find the right wheel")) {
+    if (!is_motor_here(port_wheel_right, &sn_wheel_right,
+                       "Found the right wheel",
+                       "Could not find the right wheel")) {
         return 4;
     }
-    if (!is_motor_here(port_clamp, &sn_clamp, "Found the clamp", "Could not find the clamp")) {
+    if (!is_motor_here(port_clamp, &sn_clamp, "Found the clamp",
+                       "Could not find the clamp")) {
         return 5;
     }
     int max_speed = get_min_maxspeed(sn_wheel_left, sn_wheel_right, sn_clamp);
@@ -145,7 +147,8 @@ int main(void) {
         if (move) {
             move_forward(sn_wheel_left, sn_wheel_right, speed_move, 100);
         }
-        if (!get_sensor_value(0, sn_color, &val_color) || (val_color < 0) || (val_color >= COLOR_COUNT)) {
+        if (!get_sensor_value(0, sn_color, &val_color) || (val_color < 0) ||
+            (val_color >= COLOR_COUNT)) {
             val_color = 0;
             count = 0;
         }
@@ -153,7 +156,8 @@ int main(void) {
             count++;
         }
         if (count >= 2) { // Change color
-            catch_flag(sn_wheel_left, sn_wheel_right, sn_clamp, speed_move_default);
+            catch_flag(sn_wheel_left, sn_wheel_right, sn_clamp,
+                       speed_move);
             quit = true;
         }
     }

@@ -2,9 +2,9 @@
 #include <stdio.h>
 #include <unistd.h>
 
-#include "include/ev3.h"
-#include "include/ev3_sensor.h"
-#include "include/ev3_tacho.h"
+#include "../include/ev3.h"
+#include "../include/ev3_sensor.h"
+#include "../include/ev3_tacho.h"
 
 #define Sleep(msec) usleep((msec) * 1000)
 #define PORT_A 65
@@ -47,10 +47,10 @@ int main(void) {
     printf("Found tacho motors:\n");
     for (int i = 0; i < DESC_LIMIT; i++) {
         if (ev3_tacho[i].type_inx != TACHO_TYPE__NONE_) {
-        printf("  type = %s\n", ev3_tacho_type(ev3_tacho[i].type_inx));
-        printf("  port = %s\n", ev3_tacho_port_name(i, s));
-        printf("  port = %d %d\n", ev3_tacho_desc_port(i),
-                ev3_tacho_desc_extport(i));
+            printf("  type = %s\n", ev3_tacho_type(ev3_tacho[i].type_inx));
+            printf("  port = %s\n", ev3_tacho_port_name(i, s));
+            printf("  port = %d %d\n", ev3_tacho_desc_port(i),
+                   ev3_tacho_desc_extport(i));
         }
     }
 
@@ -67,7 +67,8 @@ int main(void) {
         return 2;
     }
     if (!ev3_search_tacho_plugged_in(motor_port, 0, &sn, 0)) {
-        printf("No motor plugged in port %s.\nIs it really in ?\n", port_name[motor_port - PORT_A]);
+        printf("No motor plugged in port %s.\nIs it really in ?\n",
+               port_name[motor_port - PORT_A]);
         return 3;
     } else {
         printf("Found the motor in port %s\n", port_name[motor_port - PORT_A]);
@@ -84,7 +85,7 @@ int main(void) {
         if (_check_pressed(sn_touch) & !pressed) {
             motor_state_cycle++;
             motor_state_cycle = motor_state_cycle % 4;
-            motor_state = motor_state_cycle%2;
+            motor_state = motor_state_cycle % 2;
             if (motor_state == 1) {
                 motor_state = motor_state_cycle - 2;
             }
