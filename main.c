@@ -247,7 +247,7 @@ void turn_right_in_place(int speed, int time) {
 }
 
 int turn_until_min(int speed, int time) {
-    int ditance_n__1 = 10000;
+    int distance_n__1 = 10000;
     int distance_n = update_sonar();
     int diff = distance_n - distance_n__1;
     while (diff < 0) {
