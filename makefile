@@ -42,7 +42,7 @@ move_straight: examples/move_straight.c
 	docker run --rm -it -h ev3 -v ./:/src -w /src ev3cc $(CC) $(FLAGS) examples/move_straight.c -o bin/move_straight -Lev3dev-c/lib -lev3dev-c
 	scp bin/move_straight robot@192.168.$(IP):/home/robot
 
-set_gyro_to_zero: example/set_gyro_to_zero.c
+set_gyro_to_zero: examples/set_gyro_to_zero.c
 	docker run --rm -it -h ev3 -v ./:/src -w /src ev3cc $(CC) $(FLAGS) examples/set_gyro_to_zero.c -o bin/set_gyro_to_zero -Lev3dev-c/lib -lev3dev-c
 	scp bin/set_gyro_to_zero robot@192.168.$(IP):/home/robot
 

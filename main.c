@@ -424,7 +424,7 @@ int main(void) {
     // const float gyro_val_start = turn_until_min(speed_clamp, DEFAULT_TIME);
     const float gyro_val_start = update_gyro();
     const float first_angle = gyro_val_start + 45;
-    const float second_angle = gyro_val_start - 1;
+    const float second_angle = gyro_val_start - 2;
     const float third_angle = gyro_val_start - 90;
     const float fourth_angle = gyro_val_start - 183;
     const float fifth_angle = gyro_val_start - 290;
@@ -436,9 +436,9 @@ int main(void) {
     time_t start = time(NULL);
 
     while (!quit) {
-        if ((action == 1) || (action == 3)) {
-            move_forward(speed_left, speed_right, DEFAULT_TIME);
-        }
+        // if ((action == 1) || (action == 3)) {
+        //     move_forward(speed_left, speed_right, DEFAULT_TIME);
+        // }
 
         if ((action == 0) || (action == 4)) {
             get_sensor_value0(sn_sonar, &val_sonar);
@@ -475,8 +475,9 @@ int main(void) {
             } else if (action == 2) {
                 if (sonar < 247) {
                     time_t now = time(NULL);
-                    if (start + now < 8) {
-                        bypass_obstacle(speed_move_default, first_angle);
+                    printf("%ld\n", now);
+                    if (start - now > 10) {
+                        bypass_obstacle(speed_move_default, gyro_val_start);
                     }
                     else {
                         turn_to(speed_move_default, third_angle, 1);
