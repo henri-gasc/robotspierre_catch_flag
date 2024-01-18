@@ -387,6 +387,12 @@ int main(void) {
         return max_speed;
     }
 
+
+    const int speed_move_default = max_speed / 4;
+    const int speed_clamp = max_speed / 6;
+    const int speed_right = speed_move_default;
+    const int speed_left = speed_move_default;
+
     // Action 0: Turn to 45° the right
     // Action 1: starting position -> wall, turn to start orientation
     // Action 2: wall right -> wall other side, turn 90° to the left
@@ -395,17 +401,12 @@ int main(void) {
     // Action 5: Move forward, open clamp
 
     /* Here are the angle the robot should follow for all phases */
-    const float gyro_val_start = turn_until_min(speed_default, DEFAULT_TIME);
+    const float gyro_val_start = turn_until_min(speed_move_default, DEFAULT_TIME);
     const float first_angle = gyro_val_start + 45;
     const float second_angle = gyro_val_start - 1;
     const float third_angle = gyro_val_start - 90;
     const float fourth_angle = gyro_val_start - 183;
     const float fifth_angle = gyro_val_start - 290;
-
-    const int speed_move_default = max_speed / 4;
-    const int speed_clamp = max_speed / 6;
-    const int speed_right = speed_move_default;
-    const int speed_left = speed_move_default;
 
     float sonar = 0;
     bool quit = false;
