@@ -247,9 +247,9 @@ void turn_right_in_place(int speed, int time) {
 }
 
 int turn_until_min(int speed, int time) {
-    ditance_n__1 = 10000;
-    distance_n = update_sonar();
-    diff = distance_n - distance_n__1;
+    int ditance_n__1 = 10000;
+    int distance_n = update_sonar();
+    int diff = distance_n - distance_n__1;
     while (diff < 0) {
         turn_right_in_place(speed, time);
         distance_n__1 = distance_n;
@@ -395,7 +395,7 @@ int main(void) {
     // Action 5: Move forward, open clamp
 
     /* Here are the angle the robot should follow for all phases */
-    const float gyro_val_start = turn_until_min();
+    const float gyro_val_start = turn_until_min(speed_default, DEFAULT_TIME);
     const float first_angle = gyro_val_start + 45;
     const float second_angle = gyro_val_start - 1;
     const float third_angle = gyro_val_start - 90;
