@@ -433,14 +433,20 @@ int main(void) {
             // Phase 2
             } else if (action == 2) {
                 if (sonar < 247) {
-                    turn_to(speed_move_default, third_angle, 1);
-                    change_action();
                     time_t now = time(NULL);
-                    while (start + 20 > now) {
-                        printf("\rMoving again in %2ld", start + 20 - now);
-                        fflush(stdout);
-                        Sleep(1);
-                        time(&now);
+                    if (start + now < 8) {
+                        bypass_obstacle(speed_move_default, first_angle);
+                    }
+                    else {
+                        turn_to(speed_move_default, third_angle, 1);
+                        change_action();
+                        now = time(NULL);
+                        while (start + 20 > now) {
+                            printf("\rMoving again in %2ld", start + 20 - now);
+                            fflush(stdout);
+                            Sleep(1);
+                            time(&now);
+                        }
                     }
                     printf("\rStarting now !           \n");
                 } else {
