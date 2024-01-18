@@ -275,7 +275,7 @@ void catch_flag(int speed) {
     Sleep(1000);
 }
 
-void turn_to(int speed, float gyro_ref) {
+void turn_to(int speed, float gyro_ref, int marge) {
     int gyro_now = update_gyro();
     bool quit = false;
     float diff;
@@ -287,37 +287,37 @@ void turn_to(int speed, float gyro_ref) {
             turn_left(speed, DEFAULT_TIME);
         }
         gyro_now = update_gyro();
-        quit = (gyro_ref - 1 <= gyro_now) && (gyro_now <= gyro_ref + 1);
+        quit = (gyro_ref - marge <= gyro_now) && (gyro_now <= gyro_ref + marge);
     }
 }
 
 void bypass_obstacle(int speed, float reference_angle) {
-    Sleep(3000);
-    update_sonar();
-    if (val_sonar >= 200) {
-        printf("There is no opponent\n");
-        return;
-    }
-    turn_to(speed, reference_angle - 90);
+    // Sleep(3000);
+    // update_sonar();
+    // if (val_sonar >= 200) {
+    //     printf("There is no opponent\n");
+    //     return;
+    // }
+    turn_to(speed, reference_angle - 90, 1);
     update_sonar();
     while (val_sonar >= 250) {
         move_straight(2 * speed, DEFAULT_TIME, reference_angle - 90);
         update_sonar();
     }
-    turn_to(speed, reference_angle);
+    turn_to(speed, reference_angle, 1);
     time_t start = time(NULL);
     time_t now = start;
     while (start + 1 > now) {
         move_straight(2 * speed, DEFAULT_TIME, reference_angle);
         time(&now);
     }
-    turn_to(speed, reference_angle + 90);
+    turn_to(speed, reference_angle + 90, 1);
     update_sonar();
     while (val_sonar >= 250) {
         move_straight(2 * speed, DEFAULT_TIME, reference_angle + 90);
         update_sonar();
     }
-    turn_to(speed, reference_angle);
+    turn_to(speed, reference_angle, 1);
 }
 
 /**
@@ -372,18 +372,19 @@ int main(void) {
     // Action 1: starting position -> wall, turn to start orientation
     // Action 2: wall right -> wall other side, turn 90° to the left
     // Action 3: move straigh while closing the clamp, turn 90° to the left
-    // Action 4: Speed to our camp
-    // Action 5: may be needed if flag is to be in starting square
+    // Action 4: Speed to our camp, turn 90° to the left
+    // Action 5: Move forward, open clamp
 
     /* Here are the angle the robot should follow for all phases */
     const float gyro_val_start = update_gyro();
     const float first_angle = gyro_val_start + 45;
-    const float second_angle = gyro_val_start;
+    const float second_angle = gyro_val_start - 1;
     const float third_angle = gyro_val_start - 90;
-    const float fourth_angle = gyro_val_start - 180;
-    // const float fifth_angle = gyro_val_start + 90;
+    const float fourth_angle = gyro_val_start - 183;
+    const float fifth_angle = gyro_val_start - 290;
 
     const int speed_move_default = max_speed / 4;
+    const int speed_clamp = max_speed / 6;
     const int speed_right = speed_move_default;
     const int speed_left = speed_move_default;
 
@@ -410,7 +411,7 @@ int main(void) {
 
         // Phase 0
         if (action == 0) {
-            turn_to(2 * speed_move_default, first_angle);
+            turn_to(2 * speed_move_default, first_angle, 1);
             change_action();
         }
         if (sonar > 0) {
@@ -424,32 +425,39 @@ int main(void) {
             // Phase 1
             else if (action == 1) {
                 if (sonar < 280) {
-                    turn_to(speed_move_default, second_angle);
+                    turn_to(speed_move_default, second_angle, 1);
                     change_action();
                 } else {
                     move_straight(speed_move_default, speed_move_default, first_angle);
                 }
             // Phase 2
             } else if (action == 2) {
-                if (sonar < 270) {
-                    turn_to(speed_move_default, third_angle);
+                if (sonar < 247) {
+                    turn_to(speed_move_default, third_angle, 1);
                     change_action();
-                    Sleep(500);
+                    time_t now = time(NULL);
+                    while (start + 20 > now) {
+                        printf("\rMoving again in %2ld", start + 20 - now);
+                        fflush(stdout);
+                        Sleep(1);
+                        time(&now);
+                    }
+                    printf("\rStarting now !           \n");
                 } else {
                     move_straight(speed_move_default, DEFAULT_TIME, second_angle);
                 }
             // Phase 3
             } else if (action == 3) {
                 if (sonar < 200) {
-                    turn_to(speed_move_default, fourth_angle);
+                    turn_to(speed_clamp, fourth_angle, 0);
                     change_action();
-                } else if ((sonar < 550) && (sonar > 450)) {
+                } else if ((sonar < 520) && (sonar > 450)) {
                     if (can_catch) {
-                        catch_flag(speed_move_default);
+                        catch_flag(speed_clamp);
                     }
                 } else if (sonar <= 450) {
-                    close_clamp(speed_move_default, 1000);
-                    set_tacho_command_inx(sn_clamp, TACHO_RUN_FOREVER);
+                    close_clamp(speed_clamp, 1000);
+                    // set_tacho_command_inx(sn_clamp, TACHO_RUN_FOREVER);
                 } else {
                     if (sonar > 600) {
                         can_catch = true;
@@ -464,19 +472,15 @@ int main(void) {
                     Sleep(1000); // Wait 5 five seconds 
                     allow_quit = true;
                 }
-                // if (sonar <= 250) {
-                //     turn_to(speed_move_default * 2, sixth_angle);
-                //     action = 7;
-                //     printf("Action 7\n");
-                // }
-            // } else if (action == 7) {
-            //     move_straight(speed_move_default * 2, DEFAULT_TIME, fifth_angle);
-            //     if (sonar <= 500) {
-
-            //         move_forward(0, 0, DEFAULT_TIME);
-            //         Sleep(1000); // Wait 5 five seconds 
-            //         allow_quit = true;
-            //     }
+                else if (sonar <= 250) {
+                    turn_to(speed_move_default * 2, fifth_angle, 1);
+                    // change_action();
+                    move_forward(0, 0, DEFAULT_TIME);
+                    open_clamp(speed_move_default, 1000);
+                    change_action();
+                    Sleep(1200);
+                    quit = true;
+                }
             }
         }
     }
