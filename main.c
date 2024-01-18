@@ -246,20 +246,6 @@ void turn_right_in_place(int speed, int time) {
     motor_state_time(sn_wheel_right, - speed, time);
 }
 
-int turn_until_min(int speed, int time) {
-    int distance_n__1 = 10000;
-    int distance_n = update_sonar();
-    int diff = distance_n - distance_n__1;
-    while (diff < 0) {
-        turn_right_in_place(speed, time);
-        distance_n__1 = distance_n;
-        distance_n = update_sonar();
-        diff = distance_n - distance_n__1;
-    }
-    return update_gyro();
-}
-
-
 /**
  * @brief Open the clamp
  * 
@@ -309,6 +295,40 @@ void turn_to(int speed, float gyro_ref, int marge) {
         quit = (gyro_ref - marge <= gyro_now) && (gyro_now <= gyro_ref + marge);
     }
 }
+
+// int turn_until_min(int speed, int time) {
+//     update_gyro();
+//     turn_to(speed, gyro_now + 60, 0);
+//     float distance_n__1 = 10000.f;
+//     update_sonar();
+//     float diff = val_sonar - distance_n__1;
+//     float val = 10;
+//     int i = 1;
+//     int reg_rygo = gyro_now;
+//     int last_val = diff;
+//     while (diff != 0) {
+//         if (diff < 0) {
+//             turn_to(speed, reg_rygo - val/i, 0);
+//         } else {
+//             turn_to(speed, reg_rygo + val/i, 0);
+//         }
+//         i++;
+//         // if (diff < 0) {
+//         //     turn_right_in_place(speed, time);
+//         // } else {
+//         //     turn_right_in_place(- speed, time);
+//         // }
+//         Sleep(time/1000 * 2);
+//         printf("%f, %f, %f\n", diff, distance_n__1, val_sonar);
+//         distance_n__1 = val_sonar;
+//         printf("%f, %f, %f\n", diff, distance_n__1, val_sonar);
+//         val_sonar = update_sonar();
+//         diff = val_sonar - distance_n__1;
+//         printf("%f, %f, %f\n", diff, distance_n__1, val_sonar);
+//         update_gyro();
+//     }
+//     return update_gyro();
+// }
 
 void bypass_obstacle(int speed, float reference_angle) {
     // Sleep(3000);
@@ -401,7 +421,8 @@ int main(void) {
     // Action 5: Move forward, open clamp
 
     /* Here are the angle the robot should follow for all phases */
-    const float gyro_val_start = turn_until_min(speed_move_default, DEFAULT_TIME);
+    // const float gyro_val_start = turn_until_min(speed_clamp, DEFAULT_TIME);
+    const float gyro_val_start = update_gyro();
     const float first_angle = gyro_val_start + 45;
     const float second_angle = gyro_val_start - 1;
     const float third_angle = gyro_val_start - 90;
@@ -431,7 +452,7 @@ int main(void) {
 
         // Phase 0
         if (action == 0) {
-            //turn_to(2 * speed_move_default, first_angle, 1);
+            turn_to(2 * speed_move_default, first_angle, 1);
             change_action();
         }
         if (sonar > 0) {
