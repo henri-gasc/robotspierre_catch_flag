@@ -524,7 +524,7 @@ int main(void) {
                 else if (sonar <= 250) {
                     time_t now = time(NULL);
                     printf("%ld\n", now);
-                    if (now - start_4 < 7) {
+                    if (now - start_4 < 6) {
                         bypass_obstacle(speed_move_default, gyro_val_start);
                     }
                     turn_to(speed_move_default * 2, fifth_angle, 1);
