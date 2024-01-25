@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <time.h>
 #include <unistd.h>
 
@@ -66,20 +67,19 @@ int update_gyro() {
 }
 
 
-const char const *color[] = {"?",      "BLACK", "BLUE",  "GREEN",
-                             "YELLOW", "RED",   "WHITE", "BROWN"};
+const char *color[] = {"?",      "BLACK", "BLUE",  "GREEN",
+                       "YELLOW", "RED",   "WHITE", "BROWN"};
 #define COLOR_COUNT ((int)(sizeof(color) / sizeof(color[0])))
 
 const char* get_color_from_sensor() {
-    int val;
+    int val = 0;
 
     if (ev3_search_sensor(LEGO_EV3_COLOR, &sn_color, 0)) {
         if (!get_sensor_value(0, sn_color, &val) || (val < 0) || (val >= COLOR_COUNT)) {
             val = 0;
         }
-        return color[val];
     }
-    return color[0]; 
+    return color[val];
 }
 
 
@@ -293,8 +293,7 @@ void close_clamp(float speed, int time) {
  * @param speed the speed
  */
 bool catch_flag(int speed) {
-    bool flag = false
-    int compt = 0
+    int compt = 0;
     move_forward(speed, speed, 500);
     open_clamp(speed, 1000);
     Sleep(1000);
@@ -307,10 +306,7 @@ bool catch_flag(int speed) {
         }
         Sleep(1000);
     }
-    if (compt == 3) {
-        flag = true;
-    }
-    return flag;
+    return compt == 3;
 }
 
 void turn_to(int speed, float gyro_ref, int marge) {
@@ -454,21 +450,22 @@ int init_robot(void) {
         printf("Found the gyroscope\n");
     } else {
         printf("Could not find the gyroscope\n");
-        return 2;
+        return 3;
     }
     if (ev3_search_sensor(LEGO_EV3_COLOR, &sn_color, 0)) {
             printf("COLOR sensor is found, reading COLOR...\n");
     } else {
-        printf("Could not find color sensor")
-    }
-    if (!is_motor_here(port_wheel_left, &sn_wheel_left, "Found the left wheel", "Could not find the left wheel")) {
-        return 3;
-    }
-    if (!is_motor_here(port_wheel_right, &sn_wheel_right, "Found the right wheel", "Could not find the right wheel")) {
+        printf("Could not find color sensor");
         return 4;
     }
-    if (!is_motor_here(port_clamp, &sn_clamp, "Found the clamp", "Could not find the clamp")) {
+    if (!is_motor_here(port_wheel_left, &sn_wheel_left, "Found the left wheel", "Could not find the left wheel")) {
         return 5;
+    }
+    if (!is_motor_here(port_wheel_right, &sn_wheel_right, "Found the right wheel", "Could not find the right wheel")) {
+        return 6;
+    }
+    if (!is_motor_here(port_clamp, &sn_clamp, "Found the clamp", "Could not find the clamp")) {
+        return 7;
     }
     return 0;
 }
