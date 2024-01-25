@@ -344,7 +344,7 @@ void bypass_obstacle(int speed, float reference_angle, bool obstacle) {
     time_t now;
     time_t start_1 = time(&now);
     if (obstacle) {
-        while(start_1 + 1 > now){
+        while(start_1 + 2 > now){
             move_straight(-2 * speed, DEFAULT_TIME, reference_angle);
             time(&now);
         }
@@ -377,6 +377,30 @@ void bypass_obstacle(int speed, float reference_angle, bool obstacle) {
     turn_to(speed, reference_angle, 1);
 }
 
+void bypass_back(int speed, float reference_angle, bool obstacle) {
+    // Sleep(3000);
+    // update_sonar();
+    // if (val_sonar >= 200) {
+    //     printf("There is no opponent\n");
+    //     return;
+    // }
+    printf("%d\n", obstacle);
+    time_t now;
+    time_t start_1 = time(&now);
+    if (obstacle) {
+        while(start_1 + 2 > now){
+            move_straight(-2 * speed, DEFAULT_TIME, reference_angle);
+            time(&now);
+        }
+    }
+    turn_to(speed, reference_angle - 90, 1);
+    update_sonar();
+    while (val_sonar >= 300) {
+        move_straight(2 * speed, DEFAULT_TIME, reference_angle - 90);
+        update_sonar();
+    }
+    turn_to(speed, reference_angle, 1);  
+}
 /**
  * @brief Initialize the motors and sensors of the robot
  * 
@@ -445,7 +469,7 @@ int main(void) {
     const float first_angle = gyro_val_start + 45;
     const float second_angle = gyro_val_start - 2;
     const float third_angle = gyro_val_start - 90;
-    const float fourth_angle = gyro_val_start - 183;
+    const float fourth_angle = gyro_val_start - 181;
     const float fifth_angle = gyro_val_start - 290;
 
     printf("%f, %f, %f, %f, %f, %f\n", gyro_val_start, first_angle, second_angle, third_angle, fourth_angle, fifth_angle);
@@ -533,28 +557,26 @@ int main(void) {
                     move_straight(speed_left, speed_right, third_angle);
                 }
             } else if (action == 4) {
+                time_t now = time(NULL);
+                printf("%ld\n", now);
                 move_straight(speed_return, DEFAULT_TIME, fourth_angle);
                 if (sonar <= DISTANCE_STOP) {
                     move_forward(0, 0, DEFAULT_TIME);
                     Sleep(1000); // Wait 5 five seconds 
                     allow_quit = true;
                 }
-                else if (sonar <= 240) {
-                    time_t now = time(NULL);
-                    printf("%ld\n", now);
-                    if (now - start_4 < 10) {
-                        bypass_obstacle(speed_move_default, fourth_angle, now - start < 7);
-                    } else {
-                        turn_to(speed_return, fifth_angle, 1);
-                        // change_action();
-                        move_forward(0, 0, DEFAULT_TIME);
-                        open_clamp(speed_move_default, 1000);
-                        Sleep(500);
-                        turn_right_in_place(speed_clamp, 1000);
-                        change_action();
-                        Sleep(1200);
-                        quit = true;
-                    }
+                else if ((sonar <= 250) && (now - start_4 < 10)) {
+                    bypass_back(speed_move_default, fourth_angle, now - start < 7);
+                } else if (sonar <= 230) {
+                    turn_to(speed_return, fifth_angle, 1);
+                    // change_action();
+                    move_forward(0, 0, DEFAULT_TIME);
+                    open_clamp(speed_move_default, 1000);
+                    Sleep(500);
+                    turn_right_in_place(speed_clamp, 1000);
+                    change_action();
+                    Sleep(1200);
+                    quit = true;
                 }
             }
         }
