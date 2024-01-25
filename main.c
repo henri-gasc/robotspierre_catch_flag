@@ -340,11 +340,11 @@ void bypass_obstacle(int speed, float reference_angle, bool obstacle) {
     //     return;
     // }
     time_t now;
-    time_t start_1 = time(now);
-    if {obstacle}{
+    time_t start_1 = time(&now);
+    if (obstacle) {
         while(start_1 + 1 > now){
             move_straight(-2 * speed, DEFAULT_TIME, reference_angle);
-            time(now);
+            time(&now);
         }
     }
     turn_to(speed, reference_angle - 90, 1);
