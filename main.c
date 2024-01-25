@@ -72,6 +72,7 @@ int update_gyro() {
 void change_action() {
     action++;
     printf("Action %d\n", action);
+    printf("%ld\n", time(NULL));
 }
 
 /**
@@ -426,6 +427,7 @@ int main(void) {
 
 
     const int speed_move_default = max_speed / 4;
+    const int speed_return = speed_move_default;
     const int speed_clamp = max_speed / 6;
     const int speed_right = speed_move_default;
     const int speed_left = speed_move_default;
@@ -491,7 +493,7 @@ int main(void) {
                 if (sonar < 247) {
                     time_t now = time(NULL);
                     printf("%ld\n", now);
-                    if (now - start < 10) {
+                    if (now - start < 12) {
                         bypass_obstacle(speed_move_default, gyro_val_start, now - start < 8);
                     } else {
                         turn_to(speed_move_default, third_angle, 1);
@@ -531,22 +533,24 @@ int main(void) {
                     move_straight(speed_left, speed_right, third_angle);
                 }
             } else if (action == 4) {
-                move_straight(speed_move_default * 2, DEFAULT_TIME, fourth_angle);
+                move_straight(speed_return, DEFAULT_TIME, fourth_angle);
                 if (sonar <= DISTANCE_STOP) {
                     move_forward(0, 0, DEFAULT_TIME);
                     Sleep(1000); // Wait 5 five seconds 
                     allow_quit = true;
                 }
-                else if (sonar <= 250) {
+                else if (sonar <= 240) {
                     time_t now = time(NULL);
                     printf("%ld\n", now);
-                    if (now - start_4 < 5) {
-                        bypass_obstacle(speed_move_default, fourth_angle, now - start < 4);
+                    if (now - start_4 < 10) {
+                        bypass_obstacle(speed_move_default, fourth_angle, now - start < 7);
                     } else {
-                        turn_to(speed_move_default * 2, fifth_angle, 1);
+                        turn_to(speed_return, fifth_angle, 1);
                         // change_action();
                         move_forward(0, 0, DEFAULT_TIME);
                         open_clamp(speed_move_default, 1000);
+                        Sleep(500);
+                        turn_right_in_place(speed_clamp, 1000);
                         change_action();
                         Sleep(1200);
                         quit = true;
