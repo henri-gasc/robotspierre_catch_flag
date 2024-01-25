@@ -34,6 +34,7 @@ int action = 0;
 float previous_sonar = -1;
 float val_sonar = -1;
 int gyro_now = -1;
+time_t start_4;
 
 /**
  * @brief Return the value of the sonar after some filtering
@@ -496,7 +497,7 @@ int main(void) {
                 if (sonar < 200) {
                     turn_to(speed_clamp, fourth_angle, 0);
                     change_action();
-                    time_t start_4 = time(NULL);
+                    start_4 = time(NULL);
                 } else if ((sonar < 520) && (sonar > 450)) {
                     if (can_catch) {
                         catch_flag(speed_clamp);
