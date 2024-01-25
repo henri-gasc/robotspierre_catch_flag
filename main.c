@@ -332,13 +332,21 @@ void turn_to(int speed, float gyro_ref, int marge) {
 //     return update_gyro();
 // }
 
-void bypass_obstacle(int speed, float reference_angle) {
+void bypass_obstacle(int speed, float reference_angle, bool obstacle) {
     // Sleep(3000);
     // update_sonar();
     // if (val_sonar >= 200) {
     //     printf("There is no opponent\n");
     //     return;
     // }
+    time_t now;
+    time_t start_1 = time(now);
+    if {obstacle}{
+        while(start_1 + 1 > now){
+            move_straight(-2 * speed, DEFAULT_TIME, reference_angle);
+            time(now);
+        }
+    }
     turn_to(speed, reference_angle - 90, 1);
     update_sonar();
     while (val_sonar >= 250) {
@@ -346,9 +354,8 @@ void bypass_obstacle(int speed, float reference_angle) {
         update_sonar();
     }
     turn_to(speed, reference_angle, 1);
-    time_t start = time(NULL);
-    time_t now = start;
-    while (start + 1 > now) {
+    time_t start_2 = time(NULL);
+    while (start_2 + 2 > now) {
         move_straight(2 * speed, DEFAULT_TIME, reference_angle);
         time(&now);
     }
@@ -475,7 +482,7 @@ int main(void) {
                     time_t now = time(NULL);
                     printf("%ld\n", now);
                     if (now - start < 10) {
-                        bypass_obstacle(speed_move_default, gyro_val_start);
+                        bypass_obstacle(speed_move_default, gyro_val_start, now - start < 7);
                     } else {
                         turn_to(speed_move_default, third_angle, 1);
                         now = time(NULL);
@@ -525,7 +532,7 @@ int main(void) {
                     time_t now = time(NULL);
                     printf("%ld\n", now);
                     if (now - start_4 < 6) {
-                        bypass_obstacle(speed_move_default, fourth_angle);
+                        bypass_obstacle(speed_move_default, fourth_angle, now - start < 5);
                     } else {
                         turn_to(speed_move_default * 2, fifth_angle, 1);
                         // change_action();
