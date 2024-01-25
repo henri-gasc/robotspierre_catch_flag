@@ -212,6 +212,7 @@ void move_straight(int speed_default, int time, float default_gyro) {
             speed_left  = 1.0 * speed_default;
             speed_right = mul * speed_default;
         }
+        // printf("%f, %f, %f\n", mul, speed_left, speed_right);
     } else {
         speed_right = speed_default;
         speed_left  = speed_default;
@@ -436,10 +437,6 @@ int main(void) {
     time_t start = time(NULL);
 
     while (!quit) {
-        // if ((action == 1) || (action == 3)) {
-        //     move_forward(speed_left, speed_right, DEFAULT_TIME);
-        // }
-
         if ((action == 0) || (action == 4)) {
             get_sensor_value0(sn_sonar, &val_sonar);
             sonar = val_sonar;
@@ -469,7 +466,7 @@ int main(void) {
                     turn_to(speed_move_default, second_angle, 1);
                     change_action();
                 } else {
-                    move_straight(speed_move_default, speed_move_default, first_angle);
+                    move_straight(speed_move_default, DEFAULT_TIME, first_angle);
                 }
             // Phase 2
             } else if (action == 2) {
@@ -478,19 +475,19 @@ int main(void) {
                     printf("%ld\n", now);
                     if (now - start < 10) {
                         bypass_obstacle(speed_move_default, gyro_val_start);
+                    } else {
+                        turn_to(speed_move_default, third_angle, 1);
+                        now = time(NULL);
+                        while (start + 20 > now) {
+                            printf("\rMoving again in %2ld", start + 20 - now);
+                            fflush(stdout);
+                            Sleep(1);
+                            time(&now);
+                        }
+                        printf("\rStarting now !           \n");
+                        change_action();
+                        sonar = update_sonar();
                     }
-
-                    turn_to(speed_move_default, third_angle, 1);
-                    change_action();
-                    now = time(NULL);
-                    while (start + 20 > now) {
-                        printf("\rMoving again in %2ld", start + 20 - now);
-                        fflush(stdout);
-                        Sleep(1);
-                        time(&now);
-                    }
-                    
-                    printf("\rStarting now !           \n");
                 } else {
                     move_straight(speed_move_default, DEFAULT_TIME, second_angle);
                 }
@@ -506,6 +503,7 @@ int main(void) {
                     }
                 } else if (sonar <= 450) {
                     close_clamp(speed_clamp, 1000);
+                    move_straight(speed_move_default, DEFAULT_TIME, third_angle);
                     // set_tacho_command_inx(sn_clamp, TACHO_RUN_FOREVER);
                 } else {
                     if (sonar > 600) {
@@ -527,14 +525,15 @@ int main(void) {
                     printf("%ld\n", now);
                     if (now - start_4 < 6) {
                         bypass_obstacle(speed_move_default, fourth_angle);
+                    } else {
+                        turn_to(speed_move_default * 2, fifth_angle, 1);
+                        // change_action();
+                        move_forward(0, 0, DEFAULT_TIME);
+                        open_clamp(speed_move_default, 1000);
+                        change_action();
+                        Sleep(1200);
+                        quit = true;
                     }
-                    turn_to(speed_move_default * 2, fifth_angle, 1);
-                    // change_action();
-                    move_forward(0, 0, DEFAULT_TIME);
-                    open_clamp(speed_move_default, 1000);
-                    change_action();
-                    Sleep(1200);
-                    quit = true;
                 }
             }
         }
