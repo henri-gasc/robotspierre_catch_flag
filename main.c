@@ -339,6 +339,7 @@ void bypass_obstacle(int speed, float reference_angle, bool obstacle) {
     //     printf("There is no opponent\n");
     //     return;
     // }
+    printf("%d\n", obstacle);
     time_t now;
     time_t start_1 = time(&now);
     if (obstacle) {
@@ -355,9 +356,16 @@ void bypass_obstacle(int speed, float reference_angle, bool obstacle) {
     }
     turn_to(speed, reference_angle, 1);
     time_t start_2 = time(NULL);
-    while (start_2 + 2 > now) {
-        move_straight(2 * speed, DEFAULT_TIME, reference_angle);
-        time(&now);
+    if (obstacle){
+        while (start_2 + 2 > now) {
+            move_straight(2 * speed, DEFAULT_TIME, reference_angle);
+            time(&now);
+        }
+    } else {
+        while (start_2 + 1 > now) {
+            move_straight(2 * speed, DEFAULT_TIME, reference_angle);
+            time(&now);
+        }
     }
     turn_to(speed, reference_angle + 90, 1);
     update_sonar();
@@ -482,7 +490,7 @@ int main(void) {
                     time_t now = time(NULL);
                     printf("%ld\n", now);
                     if (now - start < 10) {
-                        bypass_obstacle(speed_move_default, gyro_val_start, now - start < 7);
+                        bypass_obstacle(speed_move_default, gyro_val_start, now - start < 8);
                     } else {
                         turn_to(speed_move_default, third_angle, 1);
                         now = time(NULL);
@@ -531,8 +539,8 @@ int main(void) {
                 else if (sonar <= 250) {
                     time_t now = time(NULL);
                     printf("%ld\n", now);
-                    if (now - start_4 < 6) {
-                        bypass_obstacle(speed_move_default, fourth_angle, now - start < 5);
+                    if (now - start_4 < 5) {
+                        bypass_obstacle(speed_move_default, fourth_angle, now - start < 4);
                     } else {
                         turn_to(speed_move_default * 2, fifth_angle, 1);
                         // change_action();
