@@ -65,6 +65,24 @@ int update_gyro() {
     return gyro_now;
 }
 
+
+const char const *color[] = {"?",      "BLACK", "BLUE",  "GREEN",
+                             "YELLOW", "RED",   "WHITE", "BROWN"};
+#define COLOR_COUNT ((int)(sizeof(color) / sizeof(color[0])))
+
+const char* get_color_from_sensor() {
+    int val;
+
+    if (ev3_search_sensor(LEGO_EV3_COLOR, &sn_color, 0)) {
+        if (!get_sensor_value(0, sn_color, &val) || (val < 0) || (val >= COLOR_COUNT)) {
+            val = 0;
+        }
+        return color[val];
+    }
+    return color[0]; 
+}
+
+
 /**
  * @brief Increment the action counter by 1
  * 
@@ -274,13 +292,25 @@ void close_clamp(float speed, int time) {
  * 
  * @param speed the speed
  */
-void catch_flag(int speed) {
+bool catch_flag(int speed) {
+    bool flag = false
+    int compt = 0
     move_forward(speed, speed, 500);
     open_clamp(speed, 1000);
     Sleep(1000);
     move_forward(0, 0, DEFAULT_TIME);
     close_clamp(speed, 1000);
     Sleep(1000);
+    for (int i = 0; i < 3; i++) {
+        if (strcmp(get_color_from_sensor(), "BLACK") != 0) {
+            compt++;
+        }
+        Sleep(1000);
+    }
+    if (compt == 3) {
+        flag = true;
+    }
+    return flag;
 }
 
 void turn_to(int speed, float gyro_ref, int marge) {
@@ -425,6 +455,11 @@ int init_robot(void) {
     } else {
         printf("Could not find the gyroscope\n");
         return 2;
+    }
+    if (ev3_search_sensor(LEGO_EV3_COLOR, &sn_color, 0)) {
+            printf("COLOR sensor is found, reading COLOR...\n");
+    } else {
+        printf("Could not find color sensor")
     }
     if (!is_motor_here(port_wheel_left, &sn_wheel_left, "Found the left wheel", "Could not find the left wheel")) {
         return 3;
