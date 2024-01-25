@@ -499,6 +499,7 @@ int main(void) {
                 if (sonar < 200) {
                     turn_to(speed_clamp, fourth_angle, 0);
                     change_action();
+                    time_t start_4 = time(NULL);
                 } else if ((sonar < 520) && (sonar > 450)) {
                     if (can_catch) {
                         catch_flag(speed_clamp);
@@ -514,7 +515,7 @@ int main(void) {
                     move_straight(speed_left, speed_right, third_angle);
                 }
             } else if (action == 4) {
-                time_t start_4 = time(NULL);
+                
                 move_straight(speed_move_default * 2, DEFAULT_TIME, fourth_angle);
                 if (sonar <= DISTANCE_STOP) {
                     move_forward(0, 0, DEFAULT_TIME);
@@ -525,7 +526,7 @@ int main(void) {
                     time_t now = time(NULL);
                     printf("%ld\n", now);
                     if (now - start_4 < 6) {
-                        bypass_obstacle(speed_move_default, gyro_val_start);
+                        bypass_obstacle(speed_move_default, fourth_angle);
                     }
                     turn_to(speed_move_default * 2, fifth_angle, 1);
                     // change_action();
