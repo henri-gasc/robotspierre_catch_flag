@@ -476,20 +476,20 @@ int main(void) {
                 if (sonar < 247) {
                     time_t now = time(NULL);
                     printf("%ld\n", now);
-                    if (start - now > 10) {
+                    if (now - start < 10) {
                         bypass_obstacle(speed_move_default, gyro_val_start);
                     }
-                    else {
-                        turn_to(speed_move_default, third_angle, 1);
-                        change_action();
-                        now = time(NULL);
-                        while (start + 20 > now) {
-                            printf("\rMoving again in %2ld", start + 20 - now);
-                            fflush(stdout);
-                            Sleep(1);
-                            time(&now);
-                        }
+
+                    turn_to(speed_move_default, third_angle, 1);
+                    change_action();
+                    now = time(NULL);
+                    while (start + 20 > now) {
+                        printf("\rMoving again in %2ld", start + 20 - now);
+                        fflush(stdout);
+                        Sleep(1);
+                        time(&now);
                     }
+                    
                     printf("\rStarting now !           \n");
                 } else {
                     move_straight(speed_move_default, DEFAULT_TIME, second_angle);
@@ -514,6 +514,7 @@ int main(void) {
                     move_straight(speed_left, speed_right, third_angle);
                 }
             } else if (action == 4) {
+                time_t start_4 = time(NULL);
                 move_straight(speed_move_default * 2, DEFAULT_TIME, fourth_angle);
                 if (sonar <= DISTANCE_STOP) {
                     move_forward(0, 0, DEFAULT_TIME);
@@ -521,6 +522,11 @@ int main(void) {
                     allow_quit = true;
                 }
                 else if (sonar <= 250) {
+                    time_t now = time(NULL);
+                    printf("%ld\n", now);
+                    if (now - start_4 < 7) {
+                        bypass_obstacle(speed_move_default, gyro_val_start);
+                    }
                     turn_to(speed_move_default * 2, fifth_angle, 1);
                     // change_action();
                     move_forward(0, 0, DEFAULT_TIME);
