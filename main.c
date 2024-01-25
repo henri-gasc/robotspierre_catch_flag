@@ -446,6 +446,8 @@ int main(void) {
     const float fourth_angle = gyro_val_start - 183;
     const float fifth_angle = gyro_val_start - 290;
 
+    printf("%f, %f, %f, %f, %f, %f\n", gyro_val_start, first_angle, second_angle, third_angle, fourth_angle, fifth_angle);
+
     float sonar = 0;
     bool quit = false;
     bool can_catch = false;
@@ -529,7 +531,6 @@ int main(void) {
                     move_straight(speed_left, speed_right, third_angle);
                 }
             } else if (action == 4) {
-                
                 move_straight(speed_move_default * 2, DEFAULT_TIME, fourth_angle);
                 if (sonar <= DISTANCE_STOP) {
                     move_forward(0, 0, DEFAULT_TIME);
