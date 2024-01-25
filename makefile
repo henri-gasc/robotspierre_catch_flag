@@ -53,3 +53,7 @@ sonar: examples/sonar.c
 print_color: examples/print_color.c
 	docker run --rm -it -h ev3 -v ./:/src -w /src ev3cc $(CC) $(FLAGS) examples/print_color.c -o bin/print_color -Lev3dev-c/lib -lev3dev-c
 	scp bin/print_color robot@192.168.$(IP):/home/robot
+
+test_gyro: examples/test_gyro.c
+	docker run --rm -it -h ev3 -v ./:/src -w /src ev3cc $(CC) $(FLAGS) examples/test_gyro.c -o bin/test_gyro -Lev3dev-c/lib -lev3dev-c
+	scp bin/test_gyro robot@192.168.$(IP):/home/robot
