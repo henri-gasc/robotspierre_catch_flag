@@ -498,6 +498,7 @@ int main(void) {
     // Action 3: move straigh while closing the clamp, turn 90° to the left
     // Action 4: Speed to our camp, turn 90° to the left
     // Action 5: Move forward, open clamp
+    // Action 10: Did not found the flag during action 3, go back to the other side and try again
 
     /* Here are the angle the robot should follow for all phases */
     // const float gyro_val_start = turn_until_min(speed_clamp, DEFAULT_TIME);
@@ -507,6 +508,7 @@ int main(void) {
     const float third_angle = gyro_val_start - 90;
     const float fourth_angle = gyro_val_start - 182;
     const float fifth_angle = gyro_val_start - 290;
+    const float tenth_angle = gyro_val_start - 270;
 
     float ref_angle_fourth_phase = fourth_angle;
 
@@ -579,9 +581,17 @@ int main(void) {
                 // printf("%s\n", get_color_from_sensor());
                 if (sonar < 240) {
                     turn_to(speed_clamp, fourth_angle, 0);
-                    set_tacho_command_inx(sn_clamp, TACHO_RUN_FOREVER);
-                    change_action();
                     start_4 = time(NULL);
+                    if (can_catch) { // We did not found the flag
+                        while (time(NULL) < start_4 + 1) {
+                            move_straight(speed_move_default, DEFAULT_TIME, fourth_angle);
+                        }
+                        turn_to(speed_move_default, tenth_angle, 1);
+                        override_action(10);
+                    } else {
+                        set_tacho_command_inx(sn_clamp, TACHO_RUN_FOREVER);
+                        change_action();
+                    }
                 } else if ((sonar < 540) && (sonar > 450) && (can_catch)) {
                     can_catch = !catch_flag(speed_clamp);
                     if (!can_catch) {
@@ -623,6 +633,13 @@ int main(void) {
                     stop_motor(sn_clamp);
                     Sleep(500);
                     quit = true;
+                }
+            } else if (action == 10) {
+                if (val_sonar <= 250) {
+                    turn_to(speed_move_default, second_angle, 1);
+                    override_action(2);
+                } else {
+                    move_straight(2 * speed_move_default, DEFAULT_TIME, tenth_angle);
                 }
             }
         }
