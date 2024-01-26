@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <time.h>
 #include <unistd.h>
 
@@ -64,6 +65,23 @@ int update_gyro() {
     // gyro_now = (int) gyro_now % 360;
     return gyro_now;
 }
+
+
+const char *color[] = {"?",      "BLACK", "BLUE",  "GREEN",
+                       "YELLOW", "RED",   "WHITE", "BROWN"};
+#define COLOR_COUNT ((int)(sizeof(color) / sizeof(color[0])))
+
+const char* get_color_from_sensor() {
+    int val = 0;
+
+    if (ev3_search_sensor(LEGO_EV3_COLOR, &sn_color, 0)) {
+        if (!get_sensor_value(0, sn_color, &val) || (val < 0) || (val >= COLOR_COUNT)) {
+            val = 0;
+        }
+    }
+    return color[val];
+}
+
 
 /**
  * @brief Increment the action counter by 1
@@ -274,13 +292,21 @@ void close_clamp(float speed, int time) {
  * 
  * @param speed the speed
  */
-void catch_flag(int speed) {
+bool catch_flag(int speed) {
+    int compt = 0;
     move_forward(speed, speed, 500);
     open_clamp(speed, 1000);
     Sleep(1000);
     move_forward(0, 0, DEFAULT_TIME);
     close_clamp(speed, 1000);
     Sleep(1000);
+    for (int i = 0; i < 3; i++) {
+        if (strcmp(get_color_from_sensor(), "BLACK") != 0) {
+            compt++;
+        }
+        Sleep(1000);
+    }
+    return compt == 3;
 }
 
 void turn_to(int speed, float gyro_ref, int marge) {
@@ -424,16 +450,22 @@ int init_robot(void) {
         printf("Found the gyroscope\n");
     } else {
         printf("Could not find the gyroscope\n");
-        return 2;
-    }
-    if (!is_motor_here(port_wheel_left, &sn_wheel_left, "Found the left wheel", "Could not find the left wheel")) {
         return 3;
     }
-    if (!is_motor_here(port_wheel_right, &sn_wheel_right, "Found the right wheel", "Could not find the right wheel")) {
+    if (ev3_search_sensor(LEGO_EV3_COLOR, &sn_color, 0)) {
+            printf("COLOR sensor is found, reading COLOR...\n");
+    } else {
+        printf("Could not find color sensor");
         return 4;
     }
-    if (!is_motor_here(port_clamp, &sn_clamp, "Found the clamp", "Could not find the clamp")) {
+    if (!is_motor_here(port_wheel_left, &sn_wheel_left, "Found the left wheel", "Could not find the left wheel")) {
         return 5;
+    }
+    if (!is_motor_here(port_wheel_right, &sn_wheel_right, "Found the right wheel", "Could not find the right wheel")) {
+        return 6;
+    }
+    if (!is_motor_here(port_clamp, &sn_clamp, "Found the clamp", "Could not find the clamp")) {
+        return 7;
     }
     return 0;
 }
