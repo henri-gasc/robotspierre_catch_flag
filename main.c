@@ -536,7 +536,7 @@ int main(void) {
             turn_to(2 * speed_move_default, first_angle, 1);
             change_action();
         }
-        if (sonar > 0) {
+        else if (sonar > 0) {
             if (sonar >= DISTANCE_STOP) {
                 allow_quit = false;
             }
