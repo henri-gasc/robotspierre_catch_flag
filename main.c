@@ -71,7 +71,7 @@ const char *color[] = {"?",      "BLACK", "BLUE",  "GREEN",
                        "YELLOW", "RED",   "WHITE", "BROWN"};
 #define COLOR_COUNT ((int)(sizeof(color) / sizeof(color[0])))
 
-const char* get_color_from_sensor() {
+int get_color_from_sensor() {
     int val = 0;
 
     if (ev3_search_sensor(LEGO_EV3_COLOR, &sn_color, 0)) {
@@ -79,7 +79,8 @@ const char* get_color_from_sensor() {
             val = 0;
         }
     }
-    return color[val];
+    return val;
+    // return color[val];
 }
 
 
@@ -293,20 +294,24 @@ void close_clamp(float speed, int time) {
  * @param speed the speed
  */
 bool catch_flag(int speed) {
-    int compt = 0;
-    move_forward(speed, speed, 500);
-    open_clamp(speed, 1000);
-    Sleep(1000);
+    open_clamp(speed, 2000);
+    Sleep(500);
+    move_forward(speed, speed, 750);
+    Sleep(1500);
     move_forward(0, 0, DEFAULT_TIME);
-    close_clamp(speed, 1000);
-    Sleep(1000);
-    for (int i = 0; i < 3; i++) {
-        if (strcmp(get_color_from_sensor(), "BLACK") != 0) {
+    close_clamp(speed, 2000);
+    Sleep(2000);
+    int compt = 0;
+    for (int i = 0; i < 6; i++) {
+        int k = get_color_from_sensor();
+        printf("\r%6s", color[k]);
+        fflush(stdout);
+        if (k == 0) {
             compt++;
         }
         Sleep(1000);
     }
-    return compt == 3;
+    return compt == 6;
 }
 
 void turn_to(int speed, float gyro_ref, int marge) {
@@ -371,7 +376,7 @@ void bypass_obstacle(int speed, float reference_angle, bool obstacle) {
     time_t start_1 = time(&now);
     if (obstacle) {
         while(start_1 + 2 > now){
-            move_straight(-2 * speed, DEFAULT_TIME, reference_angle);
+            move_straight(-speed, DEFAULT_TIME, reference_angle);
             time(&now);
         }
     }
@@ -453,9 +458,9 @@ int init_robot(void) {
         return 3;
     }
     if (ev3_search_sensor(LEGO_EV3_COLOR, &sn_color, 0)) {
-            printf("COLOR sensor is found, reading COLOR...\n");
+        printf("Found the color sensor\n");
     } else {
-        printf("Could not find color sensor");
+        printf("Could not find color sensor\n");
         return 4;
     }
     if (!is_motor_here(port_wheel_left, &sn_wheel_left, "Found the left wheel", "Could not find the left wheel")) {
@@ -481,7 +486,6 @@ int main(void) {
         return max_speed;
     }
 
-
     const int speed_move_default = max_speed / 4;
     const int speed_return = speed_move_default;
     const int speed_clamp = max_speed / 6;
@@ -501,8 +505,10 @@ int main(void) {
     const float first_angle = gyro_val_start + 45;
     const float second_angle = gyro_val_start - 2;
     const float third_angle = gyro_val_start - 90;
-    const float fourth_angle = gyro_val_start - 181;
+    const float fourth_angle = gyro_val_start - 182;
     const float fifth_angle = gyro_val_start - 290;
+
+    float ref_angle_fourth_phase = fourth_angle;
 
     printf("%f, %f, %f, %f, %f, %f\n", gyro_val_start, first_angle, second_angle, third_angle, fourth_angle, fifth_angle);
 
@@ -546,13 +552,14 @@ int main(void) {
                 }
             // Phase 2
             } else if (action == 2) {
-                if (sonar < 247) {
+                if (sonar < 230) {
                     time_t now = time(NULL);
+                    int diff = now - start;
                     printf("%ld\n", now);
-                    if (now - start < 12) {
-                        bypass_obstacle(speed_move_default, gyro_val_start, now - start < 8);
+                    if (diff < 12) {
+                        bypass_obstacle(speed_move_default, gyro_val_start, (diff < 8) && (diff > 5));
                     } else {
-                        turn_to(speed_move_default, third_angle, 1);
+                        turn_to(speed_clamp, third_angle, 0);
                         now = time(NULL);
                         while (start + 20 > now) {
                             printf("\rMoving again in %2ld", start + 20 - now);
@@ -569,13 +576,16 @@ int main(void) {
                 }
             // Phase 3
             } else if (action == 3) {
-                if (sonar < 200) {
+                // printf("%s\n", get_color_from_sensor());
+                if (sonar < 240) {
                     turn_to(speed_clamp, fourth_angle, 0);
+                    set_tacho_command_inx(sn_clamp, TACHO_RUN_FOREVER);
                     change_action();
                     start_4 = time(NULL);
-                } else if ((sonar < 520) && (sonar > 450)) {
-                    if (can_catch) {
-                        catch_flag(speed_clamp);
+                } else if ((sonar < 540) && (sonar > 450) && (can_catch)) {
+                    can_catch = !catch_flag(speed_clamp);
+                    if (!can_catch) {
+                        printf("\rFOUND THE FLAG!!! FOUND THE FLAG!!!\n");
                     }
                 } else if (sonar <= 450) {
                     close_clamp(speed_clamp, 1000);
@@ -590,24 +600,28 @@ int main(void) {
                 }
             } else if (action == 4) {
                 time_t now = time(NULL);
-                printf("%ld\n", now);
-                move_straight(speed_return, DEFAULT_TIME, fourth_angle);
+                // printf("%ld\n", now);
+                move_straight(speed_return, DEFAULT_TIME, ref_angle_fourth_phase);
                 if (sonar <= DISTANCE_STOP) {
                     move_forward(0, 0, DEFAULT_TIME);
                     Sleep(1000); // Wait 5 five seconds 
                     allow_quit = true;
                 }
                 else if ((sonar <= 250) && (now - start_4 < 10)) {
-                    bypass_back(speed_move_default, fourth_angle, now - start < 7);
-                } else if (sonar <= 230) {
+                    ref_angle_fourth_phase = fourth_angle + 4;
+                    bypass_back(speed_move_default, ref_angle_fourth_phase, now - start < 7);
+                } else if (sonar <= 210) {
+                    stop_motor(sn_clamp);
                     turn_to(speed_return, fifth_angle, 1);
                     // change_action();
                     move_forward(0, 0, DEFAULT_TIME);
-                    open_clamp(speed_move_default, 1000);
+                    open_clamp(speed_clamp, 1000);
                     Sleep(500);
                     turn_right_in_place(speed_clamp, 1000);
                     change_action();
-                    Sleep(1200);
+                    Sleep(500);
+                    stop_motor(sn_clamp);
+                    Sleep(500);
                     quit = true;
                 }
             }
