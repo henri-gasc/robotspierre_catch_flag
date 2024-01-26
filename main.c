@@ -5,6 +5,7 @@
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
+#include<sys/time.h>
 
 #include "include/ev3.h"
 #include "include/ev3_sensor.h"
@@ -36,6 +37,17 @@ float previous_sonar = -1;
 float val_sonar = -1;
 int gyro_now = -1;
 time_t start_4;
+
+/**
+ * @brief Shamelessly taken from https://stackoverflow.com/a/44896326
+ * 
+ * @return long long the current time in milliseconds
+ */
+long long timeInMilliseconds(void) {
+    struct timeval tv;
+    gettimeofday(&tv,NULL);
+    return (((long long)tv.tv_sec)*1000)+(tv.tv_usec/1000);
+}
 
 /**
  * @brief Return the value of the sonar after some filtering
@@ -241,6 +253,17 @@ void move_straight(int speed_default, int time, float default_gyro) {
     move_forward(speed_left, speed_right, time);
 }
 
+void move_straight_for(int milliseconds, float reference_angle, int speed_default) {
+    long long start = timeInMilliseconds();
+    long long now = start;
+    while ((now - start) < milliseconds) {
+        move_straight(speed_default, DEFAULT_TIME, reference_angle);
+        now = timeInMilliseconds();
+    }
+    stop_motor(sn_wheel_left);
+    stop_motor(sn_wheel_right);
+}
+
 /**
  * @brief Turn to the left
  * 
@@ -293,12 +316,12 @@ void close_clamp(float speed, int time) {
  * 
  * @param speed the speed
  */
-bool catch_flag(int speed) {
+bool catch_flag(int speed, float ref_angle) {
     open_clamp(speed, 2000);
     Sleep(500);
-    move_forward(speed, speed, 750);
-    Sleep(1500);
-    move_forward(0, 0, DEFAULT_TIME);
+    move_straight_for(500, ref_angle, speed);
+    // move_forward(speed, speed, 500);
+    Sleep(1000);
     close_clamp(speed, 2000);
     Sleep(2000);
     int compt = 0;
@@ -309,13 +332,13 @@ bool catch_flag(int speed) {
         if (k == 0) {
             compt++;
         }
-        Sleep(1000);
+        Sleep(500);
     }
     return compt == 6;
 }
 
 void turn_to(int speed, float gyro_ref, int marge) {
-    int gyro_now = update_gyro();
+    update_gyro();
     bool quit = false;
     float diff;
     while (!quit) {
@@ -325,7 +348,7 @@ void turn_to(int speed, float gyro_ref, int marge) {
         } else if (diff < 0) {
             turn_left(speed, DEFAULT_TIME);
         }
-        gyro_now = update_gyro();
+        update_gyro();
         quit = (gyro_ref - marge <= gyro_now) && (gyro_now <= gyro_ref + marge);
     }
 }
@@ -371,37 +394,24 @@ void bypass_obstacle(int speed, float reference_angle, bool obstacle) {
     //     printf("There is no opponent\n");
     //     return;
     // }
-    printf("%d\n", obstacle);
-    time_t now;
-    time_t start_1 = time(&now);
     if (obstacle) {
-        while(start_1 + 2 > now){
-            move_straight(-speed, DEFAULT_TIME, reference_angle);
-            time(&now);
-        }
+        move_straight_for(2000, reference_angle, -speed);
     }
     turn_to(speed, reference_angle - 90, 1);
     update_sonar();
-    while (val_sonar >= 250) {
+    while (val_sonar >= 270) {
         move_straight(2 * speed, DEFAULT_TIME, reference_angle - 90);
         update_sonar();
     }
     turn_to(speed, reference_angle, 1);
-    time_t start_2 = time(NULL);
-    if (obstacle){
-        while (start_2 + 2 > now) {
-            move_straight(2 * speed, DEFAULT_TIME, reference_angle);
-            time(&now);
-        }
-    } else {
-        while (start_2 + 1 > now) {
-            move_straight(2 * speed, DEFAULT_TIME, reference_angle);
-            time(&now);
-        }
+    int time_forward = 1;
+    if (obstacle) {
+        time_forward++;
     }
+    move_straight_for(time_forward * 1000, reference_angle, 2 * speed);
     turn_to(speed, reference_angle + 90, 1);
     update_sonar();
-    while (val_sonar >= 250) {
+    while (val_sonar >= 270) {
         move_straight(2 * speed, DEFAULT_TIME, reference_angle + 90);
         update_sonar();
     }
@@ -409,20 +419,8 @@ void bypass_obstacle(int speed, float reference_angle, bool obstacle) {
 }
 
 void bypass_back(int speed, float reference_angle, bool obstacle) {
-    // Sleep(3000);
-    // update_sonar();
-    // if (val_sonar >= 200) {
-    //     printf("There is no opponent\n");
-    //     return;
-    // }
-    printf("%d\n", obstacle);
-    time_t now;
-    time_t start_1 = time(&now);
     if (obstacle) {
-        while(start_1 + 2 > now){
-            move_straight(-2 * speed, DEFAULT_TIME, reference_angle);
-            time(&now);
-        }
+        move_straight_for(2000, reference_angle, -2 * speed);
     }
     turn_to(speed, reference_angle - 90, 1);
     update_sonar();
@@ -432,6 +430,7 @@ void bypass_back(int speed, float reference_angle, bool obstacle) {
     }
     turn_to(speed, reference_angle, 1);  
 }
+
 /**
  * @brief Initialize the motors and sensors of the robot
  * 
@@ -583,9 +582,7 @@ int main(void) {
                     turn_to(speed_clamp, fourth_angle, 0);
                     start_4 = time(NULL);
                     if (can_catch) { // We did not found the flag
-                        while (time(NULL) < start_4 + 1) {
-                            move_straight(speed_move_default, DEFAULT_TIME, fourth_angle);
-                        }
+                        move_straight_for(1000, fourth_angle, speed_move_default);
                         turn_to(speed_move_default, tenth_angle, 1);
                         override_action(10);
                     } else {
@@ -593,7 +590,7 @@ int main(void) {
                         change_action();
                     }
                 } else if ((sonar < 540) && (sonar > 450) && (can_catch)) {
-                    can_catch = !catch_flag(speed_clamp);
+                    can_catch = !catch_flag(speed_clamp, third_angle);
                     if (!can_catch) {
                         printf("\rFOUND THE FLAG!!! FOUND THE FLAG!!!\n");
                     }
@@ -623,15 +620,12 @@ int main(void) {
                 } else if (sonar <= 210) {
                     stop_motor(sn_clamp);
                     turn_to(speed_return, fifth_angle, 1);
-                    // change_action();
                     move_forward(0, 0, DEFAULT_TIME);
-                    open_clamp(speed_clamp, 1000);
+                    open_clamp(speed_clamp, 2000);
                     Sleep(500);
                     turn_right_in_place(speed_clamp, 1000);
+                    Sleep(1500);
                     change_action();
-                    Sleep(500);
-                    stop_motor(sn_clamp);
-                    Sleep(500);
                     quit = true;
                 }
             } else if (action == 10) {
