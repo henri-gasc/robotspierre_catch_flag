@@ -237,7 +237,7 @@ void move_straight(int speed_default, int time, float default_gyro) {
     update_gyro();
     int diff = (int) (default_gyro - gyro_now) % 360;
     if (diff != 0) {
-        float mul = 1 + (float) abs(diff) / 5;
+        float mul = 1 + (float) abs(diff) / 10;
         if (diff > 0) {
             speed_left  = mul * speed_default;
             speed_right = 1.0 * speed_default;
@@ -319,6 +319,7 @@ void close_clamp(float speed, int time) {
 bool catch_flag(int speed, float ref_angle) {
     open_clamp(speed, 2000);
     Sleep(500);
+    // printf("%f\n", ref_angle);
     move_straight_for(500, ref_angle, speed);
     // move_forward(speed, speed, 500);
     Sleep(1000);
@@ -342,6 +343,8 @@ void turn_to(int speed, float gyro_ref, int marge) {
     bool quit = false;
     float diff;
     while (!quit) {
+        // Should be better
+        // diff = ((int) (gyro_ref - gyro_now) % 360) - 180;
         diff = gyro_ref - gyro_now;
         if (diff > 0) {
             turn_right(speed, DEFAULT_TIME);
@@ -350,6 +353,7 @@ void turn_to(int speed, float gyro_ref, int marge) {
         }
         update_gyro();
         quit = (gyro_ref - marge <= gyro_now) && (gyro_now <= gyro_ref + marge);
+        // quit = (- marge <= diff) && (diff <= marge);
     }
 }
 
@@ -517,7 +521,8 @@ int main(void) {
     bool quit = false;
     bool can_catch = false;
     bool allow_quit = false;
-    time_t start = time(NULL);
+    long long start = timeInMilliseconds();
+    long long now = timeInMilliseconds();
 
     while (!quit) {
         if ((action == 0) || (action == 4)) {
@@ -554,19 +559,19 @@ int main(void) {
             // Phase 2
             } else if (action == 2) {
                 if (sonar < 230) {
-                    time_t now = time(NULL);
-                    int diff = now - start;
-                    printf("%ld\n", now);
-                    if (diff < 12) {
-                        bypass_obstacle(speed_move_default, gyro_val_start, (diff < 8) && (diff > 5));
+                    now = timeInMilliseconds();
+                    long long diff = now - start;
+                    printf("%lld\n", now);
+                    if (diff < 12000) {
+                        bypass_obstacle(speed_move_default, gyro_val_start, (diff < 8000) && (diff > 5000));
                     } else {
                         turn_to(speed_clamp, third_angle, 0);
-                        now = time(NULL);
+                        now = timeInMilliseconds();
                         while (start + 20 > now) {
-                            printf("\rMoving again in %2ld", start + 20 - now);
+                            printf("\rMoving again in %2lld", start + 20000 - now);
                             fflush(stdout);
-                            Sleep(1);
-                            time(&now);
+                            Sleep(500);
+                            now = timeInMilliseconds();
                         }
                         printf("\rStarting now !           \n");
                         change_action();
@@ -580,7 +585,6 @@ int main(void) {
                 // printf("%s\n", get_color_from_sensor());
                 if (sonar < 240) {
                     turn_to(speed_clamp, fourth_angle, 0);
-                    start_4 = time(NULL);
                     if (can_catch) { // We did not found the flag
                         move_straight_for(1000, fourth_angle, speed_move_default);
                         turn_to(speed_move_default, tenth_angle, 1);
@@ -589,6 +593,7 @@ int main(void) {
                         set_tacho_command_inx(sn_clamp, TACHO_RUN_FOREVER);
                         change_action();
                     }
+                    start_4 = timeInMilliseconds();
                 } else if ((sonar < 540) && (sonar > 450) && (can_catch)) {
                     can_catch = !catch_flag(speed_clamp, third_angle);
                     if (!can_catch) {
@@ -606,15 +611,15 @@ int main(void) {
                     move_straight(speed_left, speed_right, third_angle);
                 }
             } else if (action == 4) {
-                time_t now = time(NULL);
+                now = timeInMilliseconds();
                 // printf("%ld\n", now);
                 move_straight(speed_return, DEFAULT_TIME, ref_angle_fourth_phase);
                 if (sonar <= DISTANCE_STOP) {
                     move_forward(0, 0, DEFAULT_TIME);
-                    Sleep(1000); // Wait 5 five seconds 
+                    Sleep(1000); // Wait 1 five seconds 
                     allow_quit = true;
                 }
-                else if ((sonar <= 250) && (now - start_4 < 10)) {
+                else if ((sonar <= 250) && (now - start_4 < 10000)) {
                     ref_angle_fourth_phase = fourth_angle + 4;
                     bypass_back(speed_move_default, ref_angle_fourth_phase, now - start < 7);
                 } else if (sonar <= 210) {

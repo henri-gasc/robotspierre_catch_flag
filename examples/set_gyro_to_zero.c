@@ -26,6 +26,14 @@ void turn_left(int speed, int time) {
     motor_state_time(sn_wheel_right, speed, time);
 }
 
+int MIN(int a, int b) {
+    if (a <= b) {
+        return a;
+    } else {
+        return b;
+    }
+}
+
 /**
  * @brief Turn to the right
  *
@@ -36,6 +44,21 @@ void turn_right(int speed, int time) {
     motor_state_time(sn_wheel_left, speed, time);
     motor_state_time(sn_wheel_right, -speed, time);
 }
+
+int get_min_maxspeed(uint8_t sn_1, uint8_t sn_2) {
+    int max_speed;
+    int temp;
+    if (get_tacho_max_speed(sn_1, &max_speed) == 0) {
+        printf("Could not read the maximum speed for first arg\n");
+        max_speed = -1;
+    }
+    if (get_tacho_max_speed(sn_2, &temp) == 0) {
+        printf("Could not read the maximum speed for second arg\n");
+        max_speed = -2;
+    }
+    return MIN(max_speed, temp);
+}
+
 
 void turn_to(int speed, float gyro_ref) {
     // int gyro_now = update_gyro();
@@ -106,7 +129,7 @@ int main(void) {
     // Run all sensors
     ev3_sensor_init();
 
-    turn_to(500, 0);
+    turn_to(get_min_maxspeed(sn_wheel_left, sn_wheel_right), 0);
     while (1) {
         get_sensor_value0(sn_gyro, &val);
         printf("\r%6.0f", val);
