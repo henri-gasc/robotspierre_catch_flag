@@ -9,13 +9,9 @@
 #include <pthread.h>
 #include <sys/types.h>
 
-
-
 #include "include/ev3.h"
 #include "include/ev3_sensor.h"
 #include "include/ev3_tacho.h"
-
-
 
 #define Sleep(msec) usleep((msec) * 1000)
 #define PORT_A 65
@@ -43,6 +39,8 @@ float previous_sonar = -1;
 float val_sonar = -1;
 int gyro_now = -1;
 long long start_4;
+pid_t sound_pid;
+int step = 0;
 
 /**
  * @brief Shamelessly taken from https://stackoverflow.com/a/44896326
@@ -528,17 +526,25 @@ int init_robot(void) {
 }
 
 
-void play_sound() {
-    pid_t pid = fork();
-    if (pid == 0) { // This block will be run by the child process
-        execlp("aplay", "aplay", "La_Marseillaise.wav", (char *)NULL);
-        _exit(0);
-    }
-}
 
-void *thread_play_sound(void *arg) {
-    play_sound();
-    return NULL;
+void *thread_play_sound() {
+    sound_pid = fork();
+
+    if (step == 0){
+        step = 1;
+        if (pid == 0) { // This block will be run by the child process
+            execlp("aplay", "aplay", sound_file, (char *)NULL);
+            (0);
+        }
+    }
+
+    if (step == 1){
+        if (pid == 0) { // This block will be run by the child process
+            execlp("/bin/sh", "/bin/sh", "-c", "espeak \"viva la revolution\" --stdout -v spanish | aplay", (char *)NULL);
+            (0);
+        }
+    }
+
 }
 
 int main(void) {
@@ -712,6 +718,9 @@ int main(void) {
             }
         }
     }
+
+    kill(sound_pid, SIGTERM); // Stop the current sound
+    thread_play_sound(); // Play a new sound
 
     stop_motor(sn_wheel_left);
     stop_motor(sn_wheel_right);
