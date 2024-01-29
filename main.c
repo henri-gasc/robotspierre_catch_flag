@@ -7,6 +7,8 @@
 #include <unistd.h>
 #include<sys/time.h>
 #include <pthread.h>
+#include <sys/types.h>
+
 
 
 #include "include/ev3.h"
@@ -527,7 +529,11 @@ int init_robot(void) {
 
 
 void play_sound() {
-    execlp("aplay", "aplay", "La_Marseillaise.wav", (char *)NULL);
+    pid_t pid = fork();
+    if (pid == 0) { // This block will be run by the child process
+        execlp("aplay", "aplay", "La_Marseillaise.wav", (char *)NULL);
+        _exit(0);
+    }
 }
 
 void *thread_play_sound(void *arg) {
