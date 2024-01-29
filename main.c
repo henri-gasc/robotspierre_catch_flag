@@ -1,3 +1,4 @@
+#include <signal.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -525,26 +526,20 @@ int init_robot(void) {
     return 0;
 }
 
-
-
 void *thread_play_sound() {
     sound_pid = fork();
 
-    if (step == 0){
+    if (step == 0) {
         step = 1;
-        if (pid == 0) { // This block will be run by the child process
-            execlp("aplay", "aplay", sound_file, (char *)NULL);
-            (0);
+        if (sound_pid == 0) { // This block will be run by the child process
+            execlp("aplay", "aplay", "La_Marseillaise.wav", NULL);
         }
     }
-
-    if (step == 1){
-        if (pid == 0) { // This block will be run by the child process
-            execlp("/bin/sh", "/bin/sh", "-c", "espeak \"viva la revolution\" --stdout -v spanish | aplay", (char *)NULL);
-            (0);
+    if (step == 1) {
+        if (sound_pid == 0) { // This block will be run by the child process
+            execlp("/bin/sh", "/bin/sh", "-c", "espeak \"viva la revolution\" --stdout -v spanish | aplay", NULL);
         }
     }
-
 }
 
 int main(void) {
