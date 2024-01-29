@@ -359,16 +359,16 @@ bool catch_flag(int speed, float ref_angle) {
     close_clamp(speed, 2000);
     Sleep(2000);
     int compt = 0;
-    for (int i = 0; i < 6; i++) {
+    for (int i = 0; i < 5; i++) {
         int k = get_color_from_sensor();
         printf("\r%6s", color[k]);
         fflush(stdout);
         if (k == 0) {
             compt++;
         }
-        Sleep(500);
+        Sleep(250);
     }
-    return compt == 6;
+    return compt == 5;
 }
 
 void turn_to(int speed, float gyro_ref, int marge) {
