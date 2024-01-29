@@ -1,5 +1,5 @@
 CC = arm-linux-gnueabi-gcc
-FLAGS = -Wall -Wextra -Wpedantic
+FLAGS = -Wall -Wextra -Wpedantic -lpthread
 OUT = project_os
 SOURCES = main.c
 LIB = ev3dev-c/lib/libev3dev-c.a
