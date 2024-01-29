@@ -50,7 +50,7 @@ long long timeInMilliseconds(void) {
 }
 
 /**
- * @brief Return the value of the sonar after some filtering, if the value is set to -1, return the previous value
+ * @brief Return the value of the sonar after some filtering
  * 
  * @return float the value of the sonar
  */
@@ -62,7 +62,7 @@ float update_sonar(void) {
     // if (previous_sonar > val_sonar + 100) {
     //     return previous_sonar;
     // }
-    float new_val = (val_sonar + previous_sonar) / 2; // To avoid interferences
+    float new_val = (val_sonar + previous_sonar) / 2;
     previous_sonar = val_sonar;
     return new_val;
 }
@@ -79,24 +79,10 @@ int update_gyro() {
 }
 
 
-const char *color[] = {"?",      "BLACK", "BLUE",  "GREEN", "YELLOW", "RED",   "WHITE", "BROWN"};
+const char *color[] = {"?",      "BLACK", "BLUE",  "GREEN",
+                       "YELLOW", "RED",   "WHITE", "BROWN"};
+#define COLOR_COUNT ((int)(sizeof(color) / sizeof(color[0])))
 
-#define COLOR_COUNT ((int)(sizeof(color) / sizeof(color[0]))) // Number of colors in the array
-
-
-
-/**
- * @brief Retrieves the color from a sensor.
- *
- * This function checks if a LEGO EV3 color sensor is connected. If it is, it retrieves the sensor value.
- * If the sensor value is not retrievable, or if it is outside the valid range (0 to COLOR_COUNT-1), it defaults to 0.
- * It then returns the color corresponding to the sensor value from the color array.
- * If the sensor is not connected, it returns the first color in the color array.
- *
- * @note The function does not take any parameters.
- *
- * @return const char* The color corresponding to the sensor value, or the first color in the array if the sensor is not connected or the sensor value is invalid.
- */
 int get_color_from_sensor(void) {
     int val = 0;
 
@@ -113,11 +99,9 @@ int get_color_from_sensor(void) {
 /**
  * @brief Increment the action counter by 1
  * 
- * action is a global variable
- * 
  */
 void change_action() {
-    action++; // Increment the action counter
+    action++;
     printf("Action %d\n", action);
     printf("%ld\n", time(NULL));
 }
@@ -125,13 +109,11 @@ void change_action() {
 /**
  * @brief Force the action counter to be this value
  * 
- * action is a global variable
- * 
  * @param new_action the new value for the action counter
  */
 void override_action(int new_action) {
     printf("Force the change of action from %d to %d\n", action, new_action);
-    action = new_action; // Force the action counter to be this value
+    action = new_action;
 }
 
 /**
@@ -160,7 +142,7 @@ int MIN(int a, int b) {
  */
 bool is_motor_here(int port, uint8_t* sn, char* text_yes, char* text_no) {
     bool status = true;
-    if (!ev3_search_tacho_plugged_in(port, 0, sn, 0)) { // Check if the motor is connected
+    if (!ev3_search_tacho_plugged_in(port, 0, sn, 0)) {
         printf("%s\n", text_no);
         status = false;
     } else {
@@ -188,12 +170,12 @@ int get_min_maxspeed(uint8_t sn_1, uint8_t sn_2, uint8_t sn_3) {
         printf("Could not read the maximum speed for second arg\n");
         max_speed = -2;
     }
-    max_speed = MIN(max_speed, temp); // Get the minimum of the two first motors
+    max_speed = MIN(max_speed, temp);
     if (get_tacho_max_speed(sn_3, &temp) == 0) {
         printf("Could not read the maximum speed for third arg\n");
         max_speed = -3;
     }
-    return MIN(max_speed, temp); // Get the minimum of the three motors (the minimum of the two first and the third)
+    return MIN(max_speed, temp);
 }
 
 /**
@@ -226,7 +208,7 @@ void stop_motor(uint8_t sn) {
  * @param speed the time
  */
 void motor_state(uint8_t sn, int speed) {
-    motor_state_time(sn, speed, DEFAULT_TIME);  // Set the motor to run for 50 ms
+    motor_state_time(sn, speed, DEFAULT_TIME);
 }
 
 /**
@@ -237,8 +219,8 @@ void motor_state(uint8_t sn, int speed) {
  * @param time the time the motor should turn for
  */
 void move_forward(int speed_left, int speed_right, int time) {
-    motor_state_time(sn_wheel_left, speed_left, time); // Set the left wheel to run
-    motor_state_time(sn_wheel_right, speed_right, time); // Set the right wheel to run
+    motor_state_time(sn_wheel_left, speed_left, time);
+    motor_state_time(sn_wheel_right, speed_right, time);
 }
 
 /**
@@ -252,8 +234,6 @@ void move_straight(int speed_default, int time, float default_gyro) {
     float speed_left;
     float speed_right;
 
-    // This part of the code is used to correct the trajectory of the robot
-    // The two motor are not syncronized and the robot tend to turn to the left so we rectify that
     update_gyro();
     int diff = (int) (default_gyro - gyro_now) % 360;
     if (diff != 0) {
@@ -285,33 +265,26 @@ void move_straight_for(int milliseconds, float reference_angle, int speed_defaul
 }
 
 /**
- * @brief Turn to the left but the robot also move forward
+ * @brief Turn to the left
  * 
  * @param speed the speed
  * @param time the time
  */
 void turn_left(int speed, int time) {
-    motor_state_time(sn_wheel_left, 0, time); //only one wheel turn
+    motor_state_time(sn_wheel_left, 0, time);
     motor_state_time(sn_wheel_right, speed, time);
 }
 
 /**
- * @brief Turn to the right but the robot also move forward
+ * @brief Turn to the right
  * 
  * @param speed the speed
  * @param time the time
  */
 void turn_right(int speed, int time) {
-    motor_state_time(sn_wheel_left, speed, time); // same as before
+    motor_state_time(sn_wheel_left, speed, time);
     motor_state_time(sn_wheel_right, 0, time);
 }
-
-/**
- * @brief Turn to the right without forward
- * 
- * @param speed the speed
- * @param time the time
- */
 
 void turn_right_in_place(int speed, int time) {
     motor_state_time(sn_wheel_left, speed, time);
@@ -334,8 +307,8 @@ void open_clamp(float speed, int time) {
  * @param speed the speed
  * @param time the time
  */
-void close_clamp(float speed, int time) { //When we close the clamp we keep it close so that we don't drop the flag
-    open_clamp(- speed, time); //We just reverse the speed
+void close_clamp(float speed, int time) {
+    open_clamp(- speed, time);
 }
 
 /**
