@@ -39,30 +39,20 @@ int gyro_now = -1;
 time_t start_4;
 
 /**
- * @brief Shamelessly taken from https://stackoverflow.com/a/44896326
- * 
- * @return long long the current time in milliseconds
- */
-long long timeInMilliseconds(void) {
-    struct timeval tv;
-    gettimeofday(&tv,NULL);
-    return (((long long)tv.tv_sec)*1000)+(tv.tv_usec/1000);
-}
-
-/**
- * @brief Return the value of the sonar after some filtering
+ * @brief Return the value of the sonar after some filtering, if the value is set to -1, return the previous value
  * 
  * @return float the value of the sonar
  */
-float update_sonar(void) {
-    get_sensor_value0(sn_sonar, &val_sonar);
+
+float update_sonar(void) { 
+    get_sensor_value0(sn_sonar, &val_sonar); 
     if (previous_sonar == -1) {
         previous_sonar = val_sonar;
     }
     // if (previous_sonar > val_sonar + 100) {
     //     return previous_sonar;
     // }
-    float new_val = (val_sonar + previous_sonar) / 2;
+    float new_val = (val_sonar + previous_sonar) / 2; // To avoid interferences
     previous_sonar = val_sonar;
     return new_val;
 }
@@ -79,29 +69,45 @@ int update_gyro() {
 }
 
 
-const char *color[] = {"?",      "BLACK", "BLUE",  "GREEN",
-                       "YELLOW", "RED",   "WHITE", "BROWN"};
-#define COLOR_COUNT ((int)(sizeof(color) / sizeof(color[0])))
+const char const *color[] = {"?",      "BLACK", "BLUE",  "GREEN", "YELLOW", "RED",   "WHITE", "BROWN"};
 
-int get_color_from_sensor() {
-    int val = 0;
+#define COLOR_COUNT ((int)(sizeof(color) / sizeof(color[0]))) // Number of colors in the array
+
+
+
+/**
+ * @brief Retrieves the color from a sensor.
+ *
+ * This function checks if a LEGO EV3 color sensor is connected. If it is, it retrieves the sensor value.
+ * If the sensor value is not retrievable, or if it is outside the valid range (0 to COLOR_COUNT-1), it defaults to 0.
+ * It then returns the color corresponding to the sensor value from the color array.
+ * If the sensor is not connected, it returns the first color in the color array.
+ *
+ * @note The function does not take any parameters.
+ *
+ * @return const char* The color corresponding to the sensor value, or the first color in the array if the sensor is not connected or the sensor value is invalid.
+ */
+const char* get_color_from_sensor() {
+    int val;
 
     if (ev3_search_sensor(LEGO_EV3_COLOR, &sn_color, 0)) {
         if (!get_sensor_value(0, sn_color, &val) || (val < 0) || (val >= COLOR_COUNT)) {
             val = 0;
         }
+        return color[val]; // Return the color corresponding to the sensor value
     }
-    return val;
-    // return color[val];
+    return color[0]; 
 }
 
 
 /**
  * @brief Increment the action counter by 1
  * 
+ * action is a global variable
+ * 
  */
 void change_action() {
-    action++;
+    action++; // Increment the action counter
     printf("Action %d\n", action);
     printf("%ld\n", time(NULL));
 }
@@ -109,11 +115,13 @@ void change_action() {
 /**
  * @brief Force the action counter to be this value
  * 
+ * action is a global variable
+ * 
  * @param new_action the new value for the action counter
  */
 void override_action(int new_action) {
     printf("Force the change of action from %d to %d\n", action, new_action);
-    action = new_action;
+    action = new_action; // Force the action counter to be this value
 }
 
 /**
@@ -142,7 +150,7 @@ int MIN(int a, int b) {
  */
 bool is_motor_here(int port, uint8_t* sn, char* text_yes, char* text_no) {
     bool status = true;
-    if (!ev3_search_tacho_plugged_in(port, 0, sn, 0)) {
+    if (!ev3_search_tacho_plugged_in(port, 0, sn, 0)) { // Check if the motor is connected
         printf("%s\n", text_no);
         status = false;
     } else {
@@ -153,6 +161,8 @@ bool is_motor_here(int port, uint8_t* sn, char* text_yes, char* text_no) {
 
 /**
  * @brief Get the minimum of the maximum speed the motors can run at
+ * 
+ * 
  * 
  * @param sn_1 the first motor
  * @param sn_2 the second motor
@@ -170,12 +180,12 @@ int get_min_maxspeed(uint8_t sn_1, uint8_t sn_2, uint8_t sn_3) {
         printf("Could not read the maximum speed for second arg\n");
         max_speed = -2;
     }
-    max_speed = MIN(max_speed, temp);
+    max_speed = MIN(max_speed, temp); // Get the minimum of the two first motors
     if (get_tacho_max_speed(sn_3, &temp) == 0) {
         printf("Could not read the maximum speed for third arg\n");
         max_speed = -3;
     }
-    return MIN(max_speed, temp);
+    return MIN(max_speed, temp); // Get the minimum of the three motors (the minimum of the two first and the third)
 }
 
 /**
@@ -208,7 +218,7 @@ void stop_motor(uint8_t sn) {
  * @param speed the time
  */
 void motor_state(uint8_t sn, int speed) {
-    motor_state_time(sn, speed, DEFAULT_TIME);
+    motor_state_time(sn, speed, DEFAULT_TIME);  // Set the motor to run for 50 ms
 }
 
 /**
@@ -219,8 +229,8 @@ void motor_state(uint8_t sn, int speed) {
  * @param time the time the motor should turn for
  */
 void move_forward(int speed_left, int speed_right, int time) {
-    motor_state_time(sn_wheel_left, speed_left, time);
-    motor_state_time(sn_wheel_right, speed_right, time);
+    motor_state_time(sn_wheel_left, speed_left, time); // Set the left wheel to run
+    motor_state_time(sn_wheel_right, speed_right, time); // Set the right wheel to run
 }
 
 /**
@@ -234,10 +244,12 @@ void move_straight(int speed_default, int time, float default_gyro) {
     float speed_left;
     float speed_right;
 
+    // This part of the code is used to correct the trajectory of the robot
+    // The two motor are not syncronized and the robot tend to turn to the left so we rectify that
     update_gyro();
     int diff = (int) (default_gyro - gyro_now) % 360;
     if (diff != 0) {
-        float mul = 1 + (float) abs(diff) / 10;
+        float mul = 1 + (float) abs(diff) / 5;
         if (diff > 0) {
             speed_left  = mul * speed_default;
             speed_right = 1.0 * speed_default;
@@ -265,28 +277,35 @@ void move_straight_for(int milliseconds, float reference_angle, int speed_defaul
 }
 
 /**
- * @brief Turn to the left
+ * @brief Turn to the left but the robot move also forward
  * 
  * @param speed the speed
  * @param time the time
  */
 void turn_left(int speed, int time) {
-    motor_state_time(sn_wheel_left, 0, time);
+    motor_state_time(sn_wheel_left, 0, time); //only one wheel turn
     motor_state_time(sn_wheel_right, speed, time);
 }
 
 /**
- * @brief Turn to the right
+ * @brief Turn to the right but the robot move also forward
  * 
  * @param speed the speed
  * @param time the time
  */
 void turn_right(int speed, int time) {
-    motor_state_time(sn_wheel_left, speed, time);
+    motor_state_time(sn_wheel_left, speed, time); // same as before
     motor_state_time(sn_wheel_right, 0, time);
 }
 
-void turn_right_in_place(int speed, int time) {
+/**
+ * @brief Turn to the right without moving the robot
+ * 
+ * @param speed the speed
+ * @param time the time
+ */
+
+void turn_right_in_place(int speed, int time) { 
     motor_state_time(sn_wheel_left, speed, time);
     motor_state_time(sn_wheel_right, - speed, time);
 }
@@ -307,8 +326,8 @@ void open_clamp(float speed, int time) {
  * @param speed the speed
  * @param time the time
  */
-void close_clamp(float speed, int time) {
-    open_clamp(- speed, time);
+void close_clamp(float speed, int time) { //When we close the clamp we keep it close so that we don't drop the flag
+    open_clamp(- speed, time); //We just reverse the speed
 }
 
 /**
@@ -316,30 +335,29 @@ void close_clamp(float speed, int time) {
  * 
  * @param speed the speed
  */
-bool catch_flag(int speed, float ref_angle) {
-    open_clamp(speed, 2000);
-    Sleep(500);
-    // printf("%f\n", ref_angle);
-    move_straight_for(500, ref_angle, speed);
-    // move_forward(speed, speed, 500);
+bool catch_flag(int speed) {
+    bool flag = false
+    int compt = 0
+    move_forward(speed, speed, 500);
+    open_clamp(speed, 1000);
     Sleep(1000);
-    close_clamp(speed, 2000);
-    Sleep(2000);
-    int compt = 0;
-    for (int i = 0; i < 6; i++) {
-        int k = get_color_from_sensor();
-        printf("\r%6s", color[k]);
-        fflush(stdout);
-        if (k == 0) {
+    move_forward(0, 0, DEFAULT_TIME);
+    close_clamp(speed, 1000);
+    Sleep(1000);
+    for (int i = 0; i < 3; i++) {
+        if (strcmp(get_color_from_sensor(), "BLACK") != 0) {
             compt++;
         }
-        Sleep(500);
+        Sleep(1000);
     }
-    return compt == 6;
+    if (compt == 3) {
+        flag = true;
+    }
+    return flag;
 }
 
 void turn_to(int speed, float gyro_ref, int marge) {
-    update_gyro();
+    int gyro_now = update_gyro();
     bool quit = false;
     float diff;
     while (!quit) {
@@ -351,7 +369,7 @@ void turn_to(int speed, float gyro_ref, int marge) {
         } else if (diff < 0) {
             turn_left(speed, DEFAULT_TIME);
         }
-        update_gyro();
+        gyro_now = update_gyro();
         quit = (gyro_ref - marge <= gyro_now) && (gyro_now <= gyro_ref + marge);
         // quit = (- marge <= diff) && (diff <= marge);
     }
@@ -398,24 +416,37 @@ void bypass_obstacle(int speed, float reference_angle, bool obstacle) {
     //     printf("There is no opponent\n");
     //     return;
     // }
+    printf("%d\n", obstacle);
+    time_t now;
+    time_t start_1 = time(&now);
     if (obstacle) {
-        move_straight_for(2000, reference_angle, -speed);
+        while(start_1 + 2 > now){
+            move_straight(-2 * speed, DEFAULT_TIME, reference_angle);
+            time(&now);
+        }
     }
     turn_to(speed, reference_angle - 90, 1);
     update_sonar();
-    while (val_sonar >= 270) {
+    while (val_sonar >= 250) {
         move_straight(2 * speed, DEFAULT_TIME, reference_angle - 90);
         update_sonar();
     }
     turn_to(speed, reference_angle, 1);
-    int time_forward = 1;
-    if (obstacle) {
-        time_forward++;
+    time_t start_2 = time(NULL);
+    if (obstacle){
+        while (start_2 + 2 > now) {
+            move_straight(2 * speed, DEFAULT_TIME, reference_angle);
+            time(&now);
+        }
+    } else {
+        while (start_2 + 1 > now) {
+            move_straight(2 * speed, DEFAULT_TIME, reference_angle);
+            time(&now);
+        }
     }
-    move_straight_for(time_forward * 1000, reference_angle, 2 * speed);
     turn_to(speed, reference_angle + 90, 1);
     update_sonar();
-    while (val_sonar >= 270) {
+    while (val_sonar >= 250) {
         move_straight(2 * speed, DEFAULT_TIME, reference_angle + 90);
         update_sonar();
     }
@@ -423,8 +454,20 @@ void bypass_obstacle(int speed, float reference_angle, bool obstacle) {
 }
 
 void bypass_back(int speed, float reference_angle, bool obstacle) {
+    // Sleep(3000);
+    // update_sonar();
+    // if (val_sonar >= 200) {
+    //     printf("There is no opponent\n");
+    //     return;
+    // }
+    printf("%d\n", obstacle);
+    time_t now;
+    time_t start_1 = time(&now);
     if (obstacle) {
-        move_straight_for(2000, reference_angle, -2 * speed);
+        while(start_1 + 2 > now){
+            move_straight(-2 * speed, DEFAULT_TIME, reference_angle);
+            time(&now);
+        }
     }
     turn_to(speed, reference_angle - 90, 1);
     update_sonar();
@@ -458,22 +501,21 @@ int init_robot(void) {
         printf("Found the gyroscope\n");
     } else {
         printf("Could not find the gyroscope\n");
-        return 3;
+        return 2;
     }
     if (ev3_search_sensor(LEGO_EV3_COLOR, &sn_color, 0)) {
-        printf("Found the color sensor\n");
+            printf("COLOR sensor is found, reading COLOR...\n");
     } else {
-        printf("Could not find color sensor\n");
-        return 4;
+        printf("Could not find color sensor")
     }
     if (!is_motor_here(port_wheel_left, &sn_wheel_left, "Found the left wheel", "Could not find the left wheel")) {
-        return 5;
+        return 3;
     }
     if (!is_motor_here(port_wheel_right, &sn_wheel_right, "Found the right wheel", "Could not find the right wheel")) {
-        return 6;
+        return 4;
     }
     if (!is_motor_here(port_clamp, &sn_clamp, "Found the clamp", "Could not find the clamp")) {
-        return 7;
+        return 5;
     }
     return 0;
 }
@@ -488,6 +530,7 @@ int main(void) {
     if (max_speed < 0) {
         return max_speed;
     }
+
 
     const int speed_move_default = max_speed / 4;
     const int speed_return = speed_move_default;
@@ -509,7 +552,7 @@ int main(void) {
     const float first_angle = gyro_val_start + 45;
     const float second_angle = gyro_val_start - 2;
     const float third_angle = gyro_val_start - 90;
-    const float fourth_angle = gyro_val_start - 182;
+    const float fourth_angle = gyro_val_start - 181;
     const float fifth_angle = gyro_val_start - 290;
     const float tenth_angle = gyro_val_start - 270;
 
@@ -521,8 +564,7 @@ int main(void) {
     bool quit = false;
     bool can_catch = false;
     bool allow_quit = false;
-    long long start = timeInMilliseconds();
-    long long now = timeInMilliseconds();
+    time_t start = time(NULL);
 
     while (!quit) {
         if ((action == 0) || (action == 4)) {
@@ -540,7 +582,7 @@ int main(void) {
             turn_to(2 * speed_move_default, first_angle, 1);
             change_action();
         }
-        else if (sonar > 0) {
+        if (sonar > 0) {
             if (sonar >= DISTANCE_STOP) {
                 allow_quit = false;
             }
@@ -558,20 +600,19 @@ int main(void) {
                 }
             // Phase 2
             } else if (action == 2) {
-                if (sonar < 230) {
-                    now = timeInMilliseconds();
-                    long long diff = now - start;
-                    printf("%lld\n", now);
-                    if (diff < 12000) {
-                        bypass_obstacle(speed_move_default, gyro_val_start, (diff < 8000) && (diff > 5000));
+                if (sonar < 247) {
+                    time_t now = time(NULL);
+                    printf("%ld\n", now);
+                    if (now - start < 12) {
+                        bypass_obstacle(speed_move_default, gyro_val_start, now - start < 8);
                     } else {
-                        turn_to(speed_clamp, third_angle, 0);
-                        now = timeInMilliseconds();
+                        turn_to(speed_move_default, third_angle, 1);
+                        now = time(NULL);
                         while (start + 20 > now) {
-                            printf("\rMoving again in %2lld", start + 20000 - now);
+                            printf("\rMoving again in %2ld", start + 20 - now);
                             fflush(stdout);
-                            Sleep(500);
-                            now = timeInMilliseconds();
+                            Sleep(1);
+                            time(&now);
                         }
                         printf("\rStarting now !           \n");
                         change_action();
@@ -582,8 +623,7 @@ int main(void) {
                 }
             // Phase 3
             } else if (action == 3) {
-                // printf("%s\n", get_color_from_sensor());
-                if (sonar < 240) {
+                if (sonar < 200) {
                     turn_to(speed_clamp, fourth_angle, 0);
                     if (can_catch) { // We did not found the flag
                         move_straight_for(1000, fourth_angle, speed_move_default);
@@ -591,13 +631,11 @@ int main(void) {
                         override_action(10);
                     } else {
                         set_tacho_command_inx(sn_clamp, TACHO_RUN_FOREVER);
-                        change_action();
-                    }
-                    start_4 = timeInMilliseconds();
-                } else if ((sonar < 540) && (sonar > 450) && (can_catch)) {
-                    can_catch = !catch_flag(speed_clamp, third_angle);
-                    if (!can_catch) {
-                        printf("\rFOUND THE FLAG!!! FOUND THE FLAG!!!\n");
+                    change_action();
+                    start_4 = time(NULL);
+                } else if ((sonar < 520) && (sonar > 450)) {
+                    if (can_catch) {
+                        catch_flag(speed_clamp);
                     }
                 } else if (sonar <= 450) {
                     close_clamp(speed_clamp, 1000);
@@ -611,26 +649,26 @@ int main(void) {
                     move_straight(speed_left, speed_right, third_angle);
                 }
             } else if (action == 4) {
-                now = timeInMilliseconds();
-                // printf("%ld\n", now);
-                move_straight(speed_return, DEFAULT_TIME, ref_angle_fourth_phase);
+                time_t now = time(NULL);
+                printf("%ld\n", now);
+                move_straight(speed_return, DEFAULT_TIME, fourth_angle);
                 if (sonar <= DISTANCE_STOP) {
                     move_forward(0, 0, DEFAULT_TIME);
-                    Sleep(1000); // Wait 1 five seconds 
+                    Sleep(1000); // Wait 5 five seconds 
                     allow_quit = true;
                 }
-                else if ((sonar <= 250) && (now - start_4 < 10000)) {
-                    ref_angle_fourth_phase = fourth_angle + 4;
-                    bypass_back(speed_move_default, ref_angle_fourth_phase, now - start < 7);
-                } else if (sonar <= 210) {
-                    stop_motor(sn_clamp);
+                else if ((sonar <= 250) && (now - start_4 < 10)) {
+                    bypass_back(speed_move_default, fourth_angle, now - start < 7);
+                } else if (sonar <= 230) {
                     turn_to(speed_return, fifth_angle, 1);
+                    // change_action();
                     move_forward(0, 0, DEFAULT_TIME);
-                    open_clamp(speed_clamp, 2000);
+                    open_clamp(speed_move_default, 1000);
                     Sleep(500);
                     turn_right_in_place(speed_clamp, 1000);
                     Sleep(1500);
                     change_action();
+                    Sleep(1200);
                     quit = true;
                 }
             } else if (action == 10) {
