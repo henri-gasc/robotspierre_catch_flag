@@ -357,16 +357,16 @@ bool catch_flag(int speed, float ref_angle) {
     close_clamp(speed, 2000);
     Sleep(2000);
     int compt = 0;
-    for (int i = 0; i < 6; i++) {
+    for (int i = 0; i < 5; i++) {
         int k = get_color_from_sensor();
         printf("\r%6s", color[k]);
         fflush(stdout);
         if (k == 0) {
             compt++;
         }
-        Sleep(500);
+        Sleep(250);
     }
-    return compt == 6;
+    return compt == 5;
 }
 
 void turn_to(int speed, float gyro_ref, int marge) {
@@ -590,6 +590,7 @@ int main(void) {
     bool quit = false;
     bool can_catch = false;
     bool allow_quit = false;
+    bool entered = false;
     long long start = timeInMilliseconds();
     long long now = start;
 
@@ -653,13 +654,14 @@ int main(void) {
             } else if (action == 3) {
                 if (sonar < 240) {
                     turn_to(speed_clamp, fourth_angle, 0);
-                    if (can_catch) { // We did not found the flag
+                    if (entered && !can_catch) {
+                        set_tacho_command_inx(sn_clamp, TACHO_RUN_FOREVER);
+                        change_action();
+                    }
+                    else { // We did not found the flag
                         move_straight_for(1000, fourth_angle, speed_move_default);
                         turn_to(speed_move_default, tenth_angle, 1);
                         override_action(10);
-                    } else {
-                        set_tacho_command_inx(sn_clamp, TACHO_RUN_FOREVER);
-                        change_action();
                     }
                     start_4 = timeInMilliseconds();
                 } else if ((sonar < 540) && (sonar > 450) && (can_catch)) {
@@ -681,6 +683,7 @@ int main(void) {
                         can_catch = true;
                         open_clamp(speed_move_default, 1000);
                     }
+                    entered = true;
                     move_straight(speed_left, speed_right, third_angle);
                 }
             } else if (action == 4) {
