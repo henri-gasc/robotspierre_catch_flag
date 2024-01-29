@@ -11,6 +11,7 @@
 #include "include/ev3_sensor.h"
 #include "include/ev3_tacho.h"
 
+
 #define Sleep(msec) usleep((msec) * 1000)
 #define PORT_A 65
 #define PORT_B 66
@@ -521,6 +522,11 @@ int init_robot(void) {
     return 0;
 }
 
+
+void play_sound() {
+    execlp("aplay", "aplay", "La_Marseillaise.wav", (char *)NULL);
+}
+
 int main(void) {
     int status;
     if ((status = init_robot())) {
@@ -640,6 +646,7 @@ int main(void) {
                     can_catch = !catch_flag(speed_clamp, third_angle);
                     if (!can_catch) {
                         printf("\rFOUND THE FLAG!!! FOUND THE FLAG!!!\n");
+                        play_sound();
                     }
                 } else if (sonar <= 450) {
                     close_clamp(speed_clamp, 1000);
