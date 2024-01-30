@@ -680,7 +680,7 @@ int main(void) {
                 }
             } else if (action == 10) {
                 if (val_sonar <= 100) {
-                    move_straight_for(500, tenth_angle, speed_move_default);
+                    move_straight_for(500, tenth_angle, - speed_move_default);
                 }
                 else if (val_sonar <= 250) {
                     turn_to(speed_move_default, second_angle, 1);
