@@ -357,8 +357,9 @@ bool catch_flag(int speed, float ref_angle) {
     Sleep(1000);
     close_clamp(speed, 2000);
     Sleep(2000);
+    int num = 6;
     int compt = 0;
-    for (int i = 0; i < 5; i++) {
+    for (int i = 0; i < num; i++) {
         int k = get_color_from_sensor();
         printf("\r%6s", color[k]);
         fflush(stdout);
@@ -367,7 +368,7 @@ bool catch_flag(int speed, float ref_angle) {
         }
         Sleep(250);
     }
-    return compt == 5;
+    return compt == num;
 }
 
 void turn_to(int speed, float gyro_ref, int marge) {
@@ -447,7 +448,12 @@ void bypass_back(int speed, float reference_angle, bool obstacle) {
         move_straight(2 * speed, DEFAULT_TIME, reference_angle - 90);
         update_sonar();
     }
-    turn_to(speed, reference_angle, 1);  
+    turn_to(speed, reference_angle, 1);
+    update_sonar();
+    while (val_sonar < 300) {
+        move_forward(-speed, -speed, DEFAULT_TIME);
+        update_sonar();
+    }
 }
 
 /**
@@ -552,7 +558,7 @@ int main(void) {
     bool quit = false;
     bool can_catch = true;
     bool allow_quit = false;
-    bool entered = false;
+    // bool entered = false;
     long long start = timeInMilliseconds();
     long long now = start;
 
@@ -600,7 +606,7 @@ int main(void) {
                         turn_to(speed_clamp, third_angle, 0);
                         now = timeInMilliseconds();
                         while (start + 20000 > now) {
-                            printf("\rMoving again in %2lld", (now - start) / 1000 - 20);
+                            printf("\rMoving again in %2lld", 20 - (now - start) / 1000);
                             fflush(stdout);
                             Sleep(500);
                             now = timeInMilliseconds();
@@ -627,7 +633,7 @@ int main(void) {
                         override_action(10);
                     }
                     start_4 = timeInMilliseconds();
-                } else if ((sonar < 540) && (sonar > 450) && can_catch) {
+                } else if ((sonar < 540) && (sonar > 430) && can_catch) {
                     can_catch = !catch_flag(speed_clamp, third_angle);
                     if (!can_catch) {
                         printf("\rFOUND THE FLAG!!! FOUND THE FLAG!!!\n");
@@ -635,7 +641,7 @@ int main(void) {
                         pthread_create(&sound_thread, NULL, thread_play_sound, NULL);
                         pthread_detach(sound_thread);
                     }
-                } else if (sonar <= 450) {
+                } else if (sonar <= 430) {
                     close_clamp(speed_clamp, 1000);
                     move_straight(speed_move_default, DEFAULT_TIME, third_angle);
                     // set_tacho_command_inx(sn_clamp, TACHO_RUN_FOREVER);
@@ -656,7 +662,7 @@ int main(void) {
                     Sleep(1000); // Wait 1 five seconds 
                     allow_quit = true;
                 }
-                else if ((sonar <= 250) && (now - start_4 < 9000)) {
+                else if ((sonar <= 250) && (now - start_4 < 8500)) {
                     // printf("Changing angle from %f to ", ref_angle_fourth_phase);
                     ref_angle_fourth_phase = fourth_angle + 12;
                     // printf("%f\n", ref_angle_fourth_phase);
@@ -673,7 +679,10 @@ int main(void) {
                     quit = true;
                 }
             } else if (action == 10) {
-                if (val_sonar <= 250) {
+                if (val_sonar <= 100) {
+                    move_straight_for(500, tenth_angle, speed_move_default);
+                }
+                else if (val_sonar <= 250) {
                     turn_to(speed_move_default, second_angle, 1);
                     override_action(2);
                 } else {
