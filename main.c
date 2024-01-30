@@ -373,8 +373,10 @@ bool catch_flag(int speed, float ref_angle) {
 void turn_to(int speed, float gyro_ref, int marge) {
     update_gyro();
     bool quit = false;
+    gyro_ref = (int) gyro_ref;
     float diff;
     while (!quit) {
+        gyro_now = gyro_now;
         // Should be better
         // diff = ((int) (gyro_ref - gyro_now) % 360) - 180;
         diff = gyro_ref - gyro_now;
@@ -384,44 +386,9 @@ void turn_to(int speed, float gyro_ref, int marge) {
             turn_left(speed, DEFAULT_TIME);
         }
         update_gyro();
-        quit = (gyro_ref - marge <= gyro_now) && (gyro_now <= gyro_ref + marge);
-        // quit = (- marge <= diff) && (diff <= marge);
+        quit = (- marge <= diff) && (diff <= marge);
     }
 }
-
-// int turn_until_min(int speed, int time) {
-//     update_gyro();
-//     turn_to(speed, gyro_now + 60, 0);
-//     float distance_n__1 = 10000.f;
-//     update_sonar();
-//     float diff = val_sonar - distance_n__1;
-//     float val = 10;
-//     int i = 1;
-//     int reg_rygo = gyro_now;
-//     int last_val = diff;
-//     while (diff != 0) {
-//         if (diff < 0) {
-//             turn_to(speed, reg_rygo - val/i, 0);
-//         } else {
-//             turn_to(speed, reg_rygo + val/i, 0);
-//         }
-//         i++;
-//         // if (diff < 0) {
-//         //     turn_right_in_place(speed, time);
-//         // } else {
-//         //     turn_right_in_place(- speed, time);
-//         // }
-//         Sleep(time/1000 * 2);
-//         printf("%f, %f, %f\n", diff, distance_n__1, val_sonar);
-//         distance_n__1 = val_sonar;
-//         printf("%f, %f, %f\n", diff, distance_n__1, val_sonar);
-//         val_sonar = update_sonar();
-//         diff = val_sonar - distance_n__1;
-//         printf("%f, %f, %f\n", diff, distance_n__1, val_sonar);
-//         update_gyro();
-//     }
-//     return update_gyro();
-// }
 
 void bypass_obstacle(int speed, float reference_angle, bool obstacle) {
     // Sleep(3000);
@@ -532,7 +499,7 @@ void *thread_play_sound() {
     if (step == 0) {
         step = 1;
         if (sound_pid == 0) { // This block will be run by the child process
-            execlp("aplay", "aplay", "La_Marseillaise.wav", NULL);
+            execlp("aplay", "aplay", "dubstep.wav", NULL);
         }
     }
     if (step == 1) {
@@ -553,9 +520,9 @@ int main(void) {
         return max_speed;
     }
 
-    const int speed_move_default = max_speed / 4;
+    const int speed_move_default = max_speed / 3;
     const int speed_return = speed_move_default;
-    const int speed_clamp = max_speed / 6;
+    const int speed_clamp = max_speed / 5;
     const int speed_right = speed_move_default;
     const int speed_left = speed_move_default;
 
@@ -583,7 +550,7 @@ int main(void) {
 
     float sonar = 0;
     bool quit = false;
-    bool can_catch = false;
+    bool can_catch = true;
     bool allow_quit = false;
     bool entered = false;
     long long start = timeInMilliseconds();
@@ -627,8 +594,8 @@ int main(void) {
                     now = timeInMilliseconds();
                     long long diff = now - start;
                     printf("turning: %lld\n", diff);
-                    if (diff < 12000) {
-                        bypass_obstacle(speed_move_default, gyro_val_start, (diff < 8000) && (diff > 5000));
+                    if (diff < 10000) {
+                        bypass_obstacle(speed_move_default, gyro_val_start, (diff < 7000) && (diff > 5000));
                     } else {
                         turn_to(speed_clamp, third_angle, 0);
                         now = timeInMilliseconds();
@@ -649,7 +616,8 @@ int main(void) {
             } else if (action == 3) {
                 if (sonar < 240) {
                     turn_to(speed_clamp, fourth_angle, 0);
-                    if (entered && !can_catch) {
+                    if (!can_catch) {
+                    // if (entered && !can_catch) {
                         set_tacho_command_inx(sn_clamp, TACHO_RUN_FOREVER);
                         change_action();
                     }
@@ -659,15 +627,13 @@ int main(void) {
                         override_action(10);
                     }
                     start_4 = timeInMilliseconds();
-                } else if ((sonar < 540) && (sonar > 450) && (can_catch)) {
+                } else if ((sonar < 540) && (sonar > 450) && can_catch) {
                     can_catch = !catch_flag(speed_clamp, third_angle);
                     if (!can_catch) {
                         printf("\rFOUND THE FLAG!!! FOUND THE FLAG!!!\n");
-                        
                         pthread_t sound_thread;
                         pthread_create(&sound_thread, NULL, thread_play_sound, NULL);
                         pthread_detach(sound_thread);
-
                     }
                 } else if (sonar <= 450) {
                     close_clamp(speed_clamp, 1000);
@@ -675,10 +641,10 @@ int main(void) {
                     // set_tacho_command_inx(sn_clamp, TACHO_RUN_FOREVER);
                 } else {
                     if (sonar > 600) {
-                        can_catch = true;
+                        // can_catch = true;
                         open_clamp(speed_move_default, 1000);
                     }
-                    entered = true;
+                    // entered = true;
                     move_straight(speed_left, speed_right, third_angle);
                 }
             } else if (action == 4) {
@@ -690,11 +656,11 @@ int main(void) {
                     Sleep(1000); // Wait 1 five seconds 
                     allow_quit = true;
                 }
-                else if ((sonar <= 250) && (now - start_4 < 11000)) {
+                else if ((sonar <= 250) && (now - start_4 < 9000)) {
                     // printf("Changing angle from %f to ", ref_angle_fourth_phase);
                     ref_angle_fourth_phase = fourth_angle + 12;
                     // printf("%f\n", ref_angle_fourth_phase);
-                    bypass_back(speed_move_default, ref_angle_fourth_phase, now - start < 7000);
+                    bypass_back(speed_move_default, ref_angle_fourth_phase, now - start < 6000);
                 } else if (sonar <= 210) {
                     stop_motor(sn_clamp);
                     turn_to(speed_return, fifth_angle, 1);
