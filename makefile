@@ -24,7 +24,11 @@ $(OUT): $(LIB) $(SOURCES)
 	$(CC) $(FLAGS) -o $(OUT) $(SOURCES) -Lev3dev-c/lib -lev3dev-c
 
 $(LIB):
+	make -C ev3dev-c clean
 	make -C ev3dev-c/source/ev3
+	sudo make -C ev3dev-c/source/ev3 install
+	make -C ev3dev-c/source/ev3 shared
+	sudo make -C ev3dev-c/source/ev3 shared-install
 
 angle: examples/angle.c
 	docker run --rm -it -h ev3 -v ./:/src -w /src ev3cc $(CC) $(FLAGS) examples/angle.c -o bin/angle -Lev3dev-c/lib -lev3dev-c
